@@ -25,6 +25,6 @@ jobs:
       - run: yarn build
 
       - name: Publish version
-        run: yarn npm publish --new-version ${{ steps.release.outputs.version }} --access public
+        run: yarn npm publish --tag ${{ steps.release.outputs.version }} --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.npm_api_token }}
