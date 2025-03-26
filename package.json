@@ -9,7 +9,7 @@
   ],
   "exports": {
     ".": {
-      "import": "./src/index.js",
+      "import": "./dist/index.js",
       "require": "./dist/index.js"
     }
   },
