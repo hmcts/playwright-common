@@ -1,7 +1,7 @@
 import { PlaywrightTestProject, devices } from "playwright/test";
 import CommonConfig from "./CommonConfig";
 
-export default abstract class Projects {
+export abstract class Projects {
   public static readonly chrome: PlaywrightTestProject = {
     name: "chrome",
     use: {
