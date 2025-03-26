@@ -2,7 +2,8 @@
   "name": "@hmcts/playwright-common",
   "description": "Common library for Playwright tests",
   "version": "1.0.1",
-  "main": "main.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "engines": {
     "node": ">=20.11.1"
   },

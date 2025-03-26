@@ -6,6 +6,7 @@ export default tseslint.config(
   {
     ignores: [
       ".yarn/**",
+      "dist/**",
       "eslint.config.mjs",
       ".pnp.cjs",
       ".pnp.loader.mjs",
