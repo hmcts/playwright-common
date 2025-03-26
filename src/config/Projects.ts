@@ -1,5 +1,5 @@
 import { PlaywrightTestProject, devices } from "playwright/test";
-import { CommonConfig } from "./CommonConfig";
+import { CommonConfig } from "./CommonConfig.js";
 
 export abstract class Projects {
   public static readonly chrome: PlaywrightTestProject = {
