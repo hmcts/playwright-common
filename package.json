@@ -1,7 +1,7 @@
 {
   "name": "@hmcts/playwright-common",
   "description": "Common library for Playwright tests",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -9,7 +9,7 @@
   ],
   "exports": {
     ".": {
-      "import": "./src/index.ts",
+      "import": "./src/index.js",
       "require": "./dist/index.js"
     }
   },
