@@ -1,2 +1,3 @@
-export { CommonConfig } from "./config/CommonConfig.js";
-export { Projects } from "./config/Projects.js";
+export * from "./config";
+export * from "./page-objects";
+export * from "./utils";
