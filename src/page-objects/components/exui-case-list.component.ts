@@ -1,20 +1,20 @@
-import { Locator, Page } from "@playwright/test";
+import { Page } from "@playwright/test";
 import { Base } from "../base.js";
 import { ExuiSpinnerComponent } from "./exui-spinner.component.js";
 
 export class ExuiCaseListComponent extends Base {
-  readonly caseList = this.root.locator("exui-case-list");
-  readonly caseListTable = this.root.locator("#search-result table");
+  readonly caseList = this.page.locator("exui-case-list");
+  readonly caseListTable = this.page.locator("#search-result table");
   readonly filters = {
-    caseNameFilter: this.root.locator("#applicantCaseName"),
-    caseNumberFilter: this.root.locator("#\\[CASE_REFERENCE\\]"),
-    caseStateFilter: this.root.locator("select#wb-case-state"),
-    applyFilterBtn: this.root.getByTitle("Apply filter"),
+    caseNameFilter: this.page.locator("#applicantCaseName"),
+    caseNumberFilter: this.page.locator("#\\[CASE_REFERENCE\\]"),
+    caseStateFilter: this.page.locator("select#wb-case-state"),
+    applyFilterBtn: this.page.getByTitle("Apply filter"),
   };
-  readonly resultLinks = this.root.locator("ccd-search-result .govuk-link");
+  readonly resultLinks = this.page.locator("ccd-search-result .govuk-link");
   private spinnerComponent = new ExuiSpinnerComponent(this.page);
 
-  constructor(page: Page, private root: Locator) {
+  constructor(page: Page) {
     super(page);
   }
 
