@@ -1,6 +1,6 @@
-export { CommonConfig } from "./config/CommonConfig.js";
-export { LintingConfig } from "./config/LintingConfig.js";
-export { ProjectsConfig } from "./config/ProjectsConfig.js";
+export { CommonConfig } from "./config/common.config.js";
+export { LintingConfig } from "./config/linting.config.js";
+export { ProjectsConfig } from "./config/projects.config.js";
 
 export { ExuiCaseDetailsComponent } from "./page-objects/components/exui-case-details.component.js";
 export { ExuiCaseListComponent } from "./page-objects/components/exui-case-list.component.js";
@@ -8,7 +8,8 @@ export { ExuiSpinnerComponent } from "./page-objects/components/exui-spinner.com
 export { ExuiMediaViewerPage } from "./page-objects/pages/exui-media-viewer.po.js";
 export { IdamPage } from "./page-objects/pages/idam.po.js";
 
-export { AxeUtils } from "./utils/Axe.utils.js";
-export { BrowserUtils } from "./utils/Browser.utils.js";
-export { LighthouseUtils } from "./utils/Lighthouse.utils.js";
-export { ValidatorUtils } from "./utils/Validator.utils.js";
+export { AxeUtils } from "./utils/axe.utils.js";
+export { BrowserUtils } from "./utils/browser.utils.js";
+export { LighthouseUtils } from "./utils/lighthouse.utils.js";
+export { SessionUtils } from "./utils/session.utils.js";
+export { ValidatorUtils } from "./utils/validator.utils.js";
