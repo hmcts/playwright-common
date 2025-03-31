@@ -1,7 +1,9 @@
+import { PlaywrightTestConfig } from "playwright/test";
+
 export class CommonConfig {
   public static readonly DEFAULT_VIEWPORT = { width: 1920, height: 1080 };
 
-  public static recommended = {
+  public static recommended: PlaywrightTestConfig = {
     fullyParallel: true,
     /* Fail the build on CI if you accidentally left test.only in the source code. */
     forbidOnly: !!process.env.CI,

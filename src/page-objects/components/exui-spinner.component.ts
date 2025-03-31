@@ -1,5 +1,5 @@
 import { Page, expect } from "@playwright/test";
-import { Base } from "../base";
+import { Base } from "../base.js";
 
 export class ExuiSpinnerComponent extends Base {
   readonly spinner = this.page.locator("xuilib-loading-spinner");

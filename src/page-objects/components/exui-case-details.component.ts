@@ -1,5 +1,5 @@
 import { Locator, Page } from "@playwright/test";
-import { Base } from "../base";
+import { Base } from "../base.js";
 
 export class ExuiCaseDetailsComponent extends Base {
   readonly caseHeader = this.root.locator("ccd-case-header");

@@ -1,28 +1,22 @@
 {
   "name": "@hmcts/playwright-common",
   "description": "Common library for Playwright tests",
-  "version": "1.0.9",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js"
-    }
-  },
-  "engines": {
-    "node": ">=20.11.1"
-  },
-  "type": "module",
+  "version": "1.0.10",
+  "author": "HMCTS",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git@github.com:hmcts/playwright-common.git"
   },
-  "author": "HMCTS",
-  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/"
+  ],
+  "engines": {
+    "node": ">=20.11.1"
+  },
+  "type": "module",
   "devDependencies": {
     "@eslint/js": "^9.11.1",
     "@types/node": "^22.6.1",
@@ -43,7 +37,8 @@
     "playwright-lighthouse": "^4.0.0"
   },
   "scripts": {
-    "build": "yarn tsc -p tsconfig.json",
+    "build": "rm -rf dist && yarn tsc -p tsconfig.json",
+    "build:package": "yarn build && yarn pack",
     "lint": "yarn eslint ."
   },
   "packageManager": "yarn@4.7.0"

@@ -1,5 +1,5 @@
 import { Page, expect } from "@playwright/test";
-import { Base } from "../base";
+import { Base } from "../base.js";
 
 export class ExuiMediaViewerPage extends Base {
   readonly container = this.page.locator("exui-media-viewer");

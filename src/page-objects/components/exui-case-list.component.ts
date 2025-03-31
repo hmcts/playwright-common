@@ -1,6 +1,6 @@
 import { Locator, Page } from "@playwright/test";
-import { Base } from "../base";
-import { ExuiSpinnerComponent } from "./exui-spinner.component";
+import { Base } from "../base.js";
+import { ExuiSpinnerComponent } from "./exui-spinner.component.js";
 
 export class ExuiCaseListComponent extends Base {
   readonly caseList = this.root.locator("exui-case-list");

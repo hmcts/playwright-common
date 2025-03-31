@@ -1,5 +1,5 @@
 import { Page } from "@playwright/test";
-import { Base } from "../base";
+import { Base } from "../base.js";
 
 export interface UserCredentials {
   username: string;
