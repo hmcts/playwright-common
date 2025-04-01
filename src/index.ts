@@ -12,4 +12,6 @@ export { AxeUtils } from "./utils/axe.utils.js";
 export { BrowserUtils } from "./utils/browser.utils.js";
 export { LighthouseUtils } from "./utils/lighthouse.utils.js";
 export { SessionUtils } from "./utils/session.utils.js";
+export { TableUtils } from "./utils/table.utils.js";
 export { ValidatorUtils } from "./utils/validator.utils.js";
+export { WaitUtils } from "./utils/wait.utils.js";

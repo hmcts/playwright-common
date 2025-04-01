@@ -7,9 +7,9 @@
 - [x] Add other project configuration
 - [x] Create common configuration export for reporter, timeouts, retries, workers
 - [x] Check that imported configuration can be overwritten
-- [ ] Add EXUI page objects/components
-- [ ] Add Axe Core helpers & remove from tcoe example
-- [ ] Add lighthouse helpers & remove from tcoe example
+- [x] Add EXUI page objects/components
+- [x] Add Axe Core helpers & remove from tcoe example
+- [x] Add lighthouse helpers & remove from tcoe example
+- [x] Resolve exporting issues with lib
 - [ ] Add IDAM user creation
-- [ ] Resolve exporting issues with lib
 - [ ] Identify how fixtures might be imported
