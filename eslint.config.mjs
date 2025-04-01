@@ -29,6 +29,7 @@ export default tseslint.config(
     },
   },
   {
+    // Currently doesn't do anything, but not removing unless we are sure it isn't needed
     ...playwright.configs["flat/recommended"],
     rules: {
       ...playwright.configs["flat/recommended"].rules,
