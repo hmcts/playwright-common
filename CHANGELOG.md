@@ -5,9 +5,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.14]
+
 ### Added
 
 - Documentation - README, CONTRIBUTING & CHANGELOG
+- Add `chromium` project config
 
 ## [1.0.13]
 

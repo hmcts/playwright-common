@@ -11,6 +11,14 @@ export class ProjectsConfig {
     },
   };
 
+  public static chromium: PlaywrightTestProject = {
+    name: "chromium",
+    use: {
+      ...devices["Desktop Chrome"],
+      viewport: CommonConfig.DEFAULT_VIEWPORT,
+    },
+  };
+
   public static edge: PlaywrightTestProject = {
     name: "edge",
     use: {
