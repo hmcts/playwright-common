@@ -40,6 +40,6 @@ jobs:
       - name: Publish pre-release
         run: |
           echo "$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version)")"
-          yarn npm publish --tag "$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version)")" --access public
+          yarn npm publish --tag "1.0.14-EXUI-1243-testing-prerelease" --access public
         env:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_API_TOKEN }}
