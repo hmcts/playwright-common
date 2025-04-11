@@ -24,25 +24,6 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn build
 
-      - name: Extract branch name
-        id: branch_name
-        run: echo "branch_name=${GITHUB_HEAD_REF:-${{ github.event.pull_request.head.ref }}}" >> $GITHUB_ENV
-
-      - name: Create pre-release version
-        run: |
-          branch_name=$(echo $branch_name | sed 's/[^a-zA-Z0-9.-]/-/g')
-          current_version=$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version)")
-          if [[ "$current_version" != *"$branch_name"* ]]; then
-            new_version="${current_version}-${branch_name}"
-            npm version --new-version "$new_version" --no-git-tag-version
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -am "chore: create pre-release version"
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          else
-            echo "Version already contains branch name suffix. Skipping version update."
-          fi
-
       - name: Publish pre-release
         run: |
           echo "$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version)")"
