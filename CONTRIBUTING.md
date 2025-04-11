@@ -41,6 +41,19 @@ Simply raise a PR to master from your branch, CODEOWNERS will be notified the PR
 - If you are addressing an active issue, link the issue.
 - Ensure your commits are squashed when merging
 
+### Creating a pre-release
+
+In some cases such as SRT's, you may want to publish a version of this package but which is not yet the final version. For this you can create a "pre-release". Currently, if you have PR targetting master you can add the `create-prerelease` tag to your PR which triggers the GitHub action to publish a pre-release to npm.
+
+This pre-release will use whatever version is set in your `package.json` and this is what may be shared with other teams who require this updated package version. So it is advisable to follow the following naming convention:
+
+```
+{PACKAGE_VERSION}-{JIRA-REF}-rc.{RELEASE CANDIDATE NUMBER}
+e.g: 1.0.14-EXUI-3513-Manage-Cases-SRT-rc.0
+```
+
+The important part is to ensure you use a release candidate number (`rc.0`) as you cannot publish to NPM using the same tag twice. So should you have changes, you can simply bump the RC number. Like with a normal version, this will then be available from NPM.
+
 ### Creating a new release
 
 Use the following steps to create a new release of this package:
