@@ -31,7 +31,7 @@ jobs:
       - name: Create pre-release version
         run: |
           branch_name=$(echo $branch_name | sed 's/[^a-zA-Z0-9.-]/-/g')
-          yarn version --new-version "$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version + '-${branch_name}')")" --no-git-tag-version
+          npm version --new-version "$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version + '-${branch_name}')")" --no-git-tag-version
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -am "chore: create pre-release version"
