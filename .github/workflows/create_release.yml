@@ -1,4 +1,4 @@
-name: Node.js
+name: Create NPM release
 on:
   release:
     types: [created]

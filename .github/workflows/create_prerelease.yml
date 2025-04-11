@@ -1,0 +1,43 @@
+name: Create Pre-Release
+on:
+  pull_request:
+    types: [labeled]
+    branches:
+      - master
+
+jobs:
+  prerelease:
+    if: contains(github.event.pull_request.labels.*.name, 'create-prerelease')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set node version and build
+        uses: actions/setup-node@v4
+        with:
+          always-auth: true
+          node-version: "22.x"
+          registry-url: "https://registry.npmjs.org"
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+
+      - name: Extract branch name
+        id: branch_name
+        run: echo "export branch_name=${GITHUB_HEAD_REF:-${{ github.event.pull_request.head.ref }}}" >> $GITHUB_ENV
+
+      - name: Create pre-release version
+        run: |
+          branch_name=$(echo $branch_name | sed 's/[^a-zA-Z0-9.-]/-/g')
+          yarn version --new-version "$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version + '-${branch_name}')")" --no-git-tag-version
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: create pre-release version"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+
+      - name: Publish pre-release
+        run: yarn npm publish --tag "$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version)")" --access public
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_API_TOKEN }}
