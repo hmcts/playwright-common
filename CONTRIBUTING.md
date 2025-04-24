@@ -48,7 +48,7 @@ In some cases such as SRT's, you may want to publish a version of this package b
 This pre-release will use whatever version is set in your `package.json` and this is what may be shared with other teams who require this updated package version. So it is advisable to follow the following naming convention:
 
 ```
-{PACKAGE_VERSION}-{JIRA-REF}-rc.{RELEASE CANDIDATE NUMBER}
+{PACKAGE_VERSION}-{JIRA-REF-TICKET-TITLE}-rc.{RELEASE CANDIDATE NUMBER}
 e.g: 1.0.14-EXUI-3513-Manage-Cases-SRT-rc.0
 ```
 
