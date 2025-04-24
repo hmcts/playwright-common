@@ -28,3 +28,10 @@ jobs:
         run: yarn npm publish --tag $(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version)") --access public
         env:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_API_TOKEN }}
+
+      - name: Comment PR with published version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "🚀 Pre-release version \`${{ steps.version.outputs.version }}\` has been published"
