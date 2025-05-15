@@ -13,7 +13,7 @@ export class ExuiCaseListComponent {
     applyFilterBtn: this.page.getByTitle("Apply filter"),
   };
   readonly resultLinks = this.page.locator("ccd-search-result .govuk-link");
-  readonly spinnerComponent = new ExuiSpinnerComponent(this.page);
+  private spinnerComponent = new ExuiSpinnerComponent(this.page);
   
   public async searchByCaseName(caseName: string): Promise<void> {
     await this.filters.caseNameFilter.fill(caseName);
