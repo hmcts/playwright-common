@@ -7,11 +7,11 @@ export class ExuiCaseListComponent {
   readonly caseList = this.page.locator("exui-case-list");
   readonly caseListTable = this.page.locator("#search-result table");
   readonly filters = {
-      caseNameFilter: this.page.locator("#applicantCaseName"),
-      caseNumberFilter: this.page.locator("#\\[CASE_REFERENCE\\]"),
-      caseStateFilter: this.page.locator("select#wb-case-state"),
-      applyFilterBtn: this.page.getByTitle("Apply filter"),
-    };
+    caseNameFilter: this.page.locator("#applicantCaseName"),
+    caseNumberFilter: this.page.locator("#\\[CASE_REFERENCE\\]"),
+    caseStateFilter: this.page.locator("select#wb-case-state"),
+    applyFilterBtn: this.page.getByTitle("Apply filter"),
+  };
   readonly resultLinks = this.page.locator("ccd-search-result .govuk-link");
   readonly spinnerComponent = new ExuiSpinnerComponent(this.page);
   
