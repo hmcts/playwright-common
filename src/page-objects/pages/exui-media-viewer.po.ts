@@ -1,30 +1,18 @@
-import { Page, expect, Locator } from "@playwright/test";
+import { Page, expect } from "@playwright/test";
 
 export class ExuiMediaViewerPage {
-  readonly page: Page;
-  readonly container: Locator;
-  readonly toolbar: {
-    container: Locator;
-    numPages: Locator;
-    pageDownBtn: Locator;
-    pageUpBtn: Locator;
-  };
-  readonly clippingCoords: {
-    fullPage: { x: number; y: number; width: number; height: number };
-  };
+  constructor(public page: Page) {}
 
-  constructor(page: Page) {
-    this.container = page.locator("exui-media-viewer");
-    this.toolbar = {
-      container: page.locator("#toolbarContainer"),
-      numPages: page.locator("#numPages"),
-      pageDownBtn: page.locator("#mvDownBtn"),
-      pageUpBtn: page.locator("#mvUpBtn"),
-    };
-    this.clippingCoords = {
-      fullPage: { x: -1000, y: 0, width: 1920, height: 1080 },
-    };
-  }
+  readonly container = this.page.locator("exui-media-viewer");
+  readonly toolbar = {
+    container: this.page.locator("#toolbarContainer"),
+    numPages: this.page.locator("#numPages"),
+    pageDownBtn: this.page.locator("#mvDownBtn"),
+    pageUpBtn: this.page.locator("#mvUpBtn"),
+  };
+  readonly clippingCoords = {
+    fullPage: { x: -1000, y: 0, width: 1920, height: 1080 },
+  };
 
   public async waitForLoad() {
     await expect
