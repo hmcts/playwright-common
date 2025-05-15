@@ -3,11 +3,10 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Changed
+## [1.0.15]
 
 - Workflow changes - creating a pre-release version
+- Remove base page
 
 ## [1.0.14]
 
@@ -22,6 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[unreleased]: https://github.com/hmcts/playwright-common/compare/v1.0.14...HEAD
+[1.0.15]: https://github.com/hmcts/playwright-common/compare/v1.0.15s
 [1.0.14]: https://github.com/hmcts/playwright-common/compare/v1.0.14
 [1.0.13]: https://github.com/hmcts/playwright-common/compare/v1.0.13
