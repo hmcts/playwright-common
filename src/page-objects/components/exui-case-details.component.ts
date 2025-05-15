@@ -1,15 +1,17 @@
-import { Page } from "@playwright/test";
-import { Base } from "../base.js";
+import { Page, Locator } from "@playwright/test";
 
-export class ExuiCaseDetailsComponent extends Base {
-  readonly caseHeader = this.page.locator("ccd-case-header");
-  readonly tabs = {
-    documentsTab: this.page.getByRole("tab", { name: "Case documents" }),
-  };
-  readonly documentField = this.page.locator("ccd-read-document-field");
+export class ExuiCaseDetailsComponent {
+  readonly page: Page;
+  readonly caseHeader: Locator;
+  readonly tabs: Locator;
+  readonly documentField: Locator;
 
   constructor(page: Page) {
-    super(page);
+    this.caseHeader = this.page.locator("ccd-case-header");
+    this.tabs = {
+    documentsTab: this.page.getByRole("tab", { name: "Case documents" }),
+  };
+    this.documentField = this.page.locator("ccd-read-document-field");
   }
 
   public async getCaseNumber(): Promise<string> {

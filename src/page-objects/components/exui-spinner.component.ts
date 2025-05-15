@@ -1,11 +1,11 @@
-import { Page, expect } from "@playwright/test";
-import { Base } from "../base.js";
+import { Page, expect, Locator } from "@playwright/test";
 
-export class ExuiSpinnerComponent extends Base {
-  readonly spinner = this.page.locator("xuilib-loading-spinner");
-
+export class ExuiSpinnerComponent{
+  readonly page: Page;
+  readonly spinner: Locator;
+  
   constructor(page: Page) {
-    super(page);
+    this.spinner = this.page.locator("xuilib-loading-spinner");
   }
 
   async wait() {
