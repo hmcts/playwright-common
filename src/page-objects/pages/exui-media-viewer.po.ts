@@ -39,9 +39,7 @@ export class ExuiMediaViewerPage {
       await expect(this.page).toHaveScreenshot({
         clip: this.clippingCoords.fullPage,
       });
-      if (i !== totalPages - 1) {
-        await this.toolbar.pageDownBtn.click();
-      }
+      if (i != totalPages - 1) await this.toolbar.pageDownBtn.click();
     }
   }
 }
