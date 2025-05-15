@@ -1,7 +1,8 @@
 import { Page, expect } from "@playwright/test";
-import { Base } from "../base.js";
 
-export class ExuiMediaViewerPage extends Base {
+export class ExuiMediaViewerPage {
+  constructor(public page: Page) {}
+
   readonly container = this.page.locator("exui-media-viewer");
   readonly toolbar = {
     container: this.page.locator("#toolbarContainer"),
@@ -12,10 +13,6 @@ export class ExuiMediaViewerPage extends Base {
   readonly clippingCoords = {
     fullPage: { x: -1000, y: 0, width: 1920, height: 1080 },
   };
-
-  constructor(page: Page) {
-    super(page);
-  }
 
   public async waitForLoad() {
     await expect
@@ -32,7 +29,7 @@ export class ExuiMediaViewerPage extends Base {
   public async getNumberOfPages(): Promise<number> {
     const text = await this.toolbar.numPages.textContent();
     if (!text) throw new Error("No page numbers found");
-    return parseInt(text?.replace("/", ""));
+    return parseInt(text.replace("/", ""));
   }
 
   public async runVisualTestOnAllPages() {
@@ -40,7 +37,6 @@ export class ExuiMediaViewerPage extends Base {
     const totalPages = await this.getNumberOfPages();
     for (let i = 0; i < totalPages; i++) {
       await expect(this.page).toHaveScreenshot({
-        // Clips the right side of the document
         clip: this.clippingCoords.fullPage,
       });
       if (i != totalPages - 1) await this.toolbar.pageDownBtn.click();

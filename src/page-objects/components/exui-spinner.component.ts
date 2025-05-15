@@ -1,12 +1,9 @@
 import { Page, expect } from "@playwright/test";
-import { Base } from "../base.js";
 
-export class ExuiSpinnerComponent extends Base {
+export class ExuiSpinnerComponent{
+  constructor(public page: Page) {}
+
   readonly spinner = this.page.locator("xuilib-loading-spinner");
-
-  constructor(page: Page) {
-    super(page);
-  }
 
   async wait() {
     await expect

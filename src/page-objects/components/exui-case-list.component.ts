@@ -1,8 +1,9 @@
 import { Page } from "@playwright/test";
-import { Base } from "../base.js";
 import { ExuiSpinnerComponent } from "./exui-spinner.component.js";
 
-export class ExuiCaseListComponent extends Base {
+export class ExuiCaseListComponent {
+  constructor(public page: Page) {}
+  
   readonly caseList = this.page.locator("exui-case-list");
   readonly caseListTable = this.page.locator("#search-result table");
   readonly filters = {
@@ -13,11 +14,7 @@ export class ExuiCaseListComponent extends Base {
   };
   readonly resultLinks = this.page.locator("ccd-search-result .govuk-link");
   private spinnerComponent = new ExuiSpinnerComponent(this.page);
-
-  constructor(page: Page) {
-    super(page);
-  }
-
+  
   public async searchByCaseName(caseName: string): Promise<void> {
     await this.filters.caseNameFilter.fill(caseName);
     await this.filters.applyFilterBtn.click();

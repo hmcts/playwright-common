@@ -1,5 +1,4 @@
 import { Page } from "@playwright/test";
-import { Base } from "../base.js";
 
 export interface UserCredentials {
   username: string;
@@ -7,18 +6,15 @@ export interface UserCredentials {
   sessionFile: string;
   cookieName?: string;
 }
+export class IdamPage {
+  constructor(public page: Page) {}
 
-export class IdamPage extends Base {
   readonly heading = this.page.getByRole("heading", {
     name: "Sign in or create an account",
   });
   readonly usernameInput = this.page.locator("#username");
   readonly passwordInput = this.page.locator("#password");
   readonly submitBtn = this.page.locator('[name="save"]');
-
-  constructor(page: Page) {
-    super(page);
-  }
 
   async login(user: UserCredentials): Promise<void> {
     await this.usernameInput.fill(user.username);
