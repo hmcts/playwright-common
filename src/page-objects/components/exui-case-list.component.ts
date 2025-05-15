@@ -3,6 +3,7 @@ import { ExuiSpinnerComponent } from "./exui-spinner.component.js";
 
 export class ExuiCaseListComponent {
   constructor(public page: Page) {}
+  
   readonly caseList = this.page.locator("exui-case-list");
   readonly caseListTable = this.page.locator("#search-result table");
   readonly filters = {

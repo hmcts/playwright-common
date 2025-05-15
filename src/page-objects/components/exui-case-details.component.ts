@@ -8,7 +8,6 @@ export class ExuiCaseDetailsComponent {
     documentsTab: this.page.getByRole("tab", { name: "Case documents" }),
   };
   readonly documentField = this.page.locator("ccd-read-document-field");
-  
 
   public async getCaseNumber(): Promise<string> {
     const text = await this.caseHeader.textContent();
