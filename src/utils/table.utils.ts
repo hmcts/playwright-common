@@ -23,9 +23,8 @@ export class TableUtils {
       const cells = rows.nth(i).locator("td");
 
       const cellCount = await cells.count();
-      // Start at the second cell to skip the checkbox
-      for (let j = 1; j < cellCount; j++) {
-        const header = headers[j - 1]; // First cell is skipped but headers need to stay in sync
+      for (let j = 0; j < cellCount; j++) {
+        const header = headers[j];
         const cell = cells.nth(j);
         rowData[header] = (await cell.innerText()).trim();
       }
