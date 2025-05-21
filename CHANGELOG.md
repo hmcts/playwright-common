@@ -3,6 +3,10 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.16]
+
+- Fix table utils (in cases where EXUI doesn't use checkboxes)
+
 ## [1.0.15]
 
 - Workflow changes - creating a pre-release version
@@ -21,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.15]: https://github.com/hmcts/playwright-common/compare/v1.0.15s
-[1.0.14]: https://github.com/hmcts/playwright-common/compare/v1.0.14
-[1.0.13]: https://github.com/hmcts/playwright-common/compare/v1.0.13
+[1.0.16]: https://github.com/hmcts/playwright-common/compare/v1.0.16...HEAD
+[1.0.15]: https://github.com/hmcts/playwright-common/compare/v1.0.15...v1.0.16
+[1.0.14]: https://github.com/hmcts/playwright-common/compare/v1.0.14...v1.0.15
+[1.0.13]: https://github.com/hmcts/playwright-common/releases/tag/v1.0.13
