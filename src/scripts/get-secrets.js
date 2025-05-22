@@ -2,6 +2,11 @@ import { execSync } from "child_process";
 import * as fs from "fs";
 import path from "path";
 
+// Change KEY_VAULT_NAME if you want to use a different environment
+// Secrets must be tagged with "e2e": "ENV_VAR_NAME" in Azure Key Vault
+// This script looks for the tagged secrets and creates an .env file based on the .env.example file
+// Requires: Azure CLI & JQ (brew install azure-cli jq)
+
 // Configuration
 const EXAMPLE_ENV_FILE = ".env.example";
 const ENV_FILE = ".env";
