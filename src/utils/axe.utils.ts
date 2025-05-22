@@ -31,6 +31,21 @@ export class AxeUtils {
     if (options?.exclude) builder.exclude(options.exclude);
     if (options?.disableRules) builder.disableRules(options.disableRules);
     const results = await builder.analyze();
+
+    if (process.env.PWDEBUG) {
+      if (results.violations.length > 0) {
+        console.log(`Accessibility issues found on ${this.page.url()}:`);
+        results.violations.forEach((violation) => {
+          console.log(`${violation.id}: ${violation.description}`);
+          console.log(`Impact: ${violation.impact}`);
+          console.log(
+            `Affected nodes:`,
+            violation.nodes.map((node) => node.html).join("\n")
+          );
+        });
+      }
+    }
+
     expect.soft(results.violations).toEqual([]);
   }
 }
