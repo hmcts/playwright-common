@@ -3,6 +3,10 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.20]
+
+- Move devDeps to dependencies due to missing modules
+
 ## [1.0.19]
 
 - Axe Core Fix: Array not supported in `.exclude()` so chain the method instead
@@ -38,7 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.19]: https://github.com/hmcts/playwright-common/compare/v1.0.19...HEAD
+[1.0.20]: https://github.com/hmcts/playwright-common/compare/v1.0.20...HEAD
+[1.0.19]: https://github.com/hmcts/playwright-common/compare/v1.0.19...v1.0.20
 [1.0.18]: https://github.com/hmcts/playwright-common/compare/v1.0.18...v1.0.19
 [1.0.17]: https://github.com/hmcts/playwright-common/compare/v1.0.17...v1.0.18
 [1.0.16]: https://github.com/hmcts/playwright-common/compare/v1.0.16...v1.0.17
