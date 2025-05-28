@@ -28,7 +28,13 @@ export class AxeUtils {
     const builder = new AxeBuilder({ page: this.page }).withTags(
       this.DEFAULT_TAGS
     );
-    if (options?.exclude) builder.exclude(options.exclude);
+    if (options?.exclude) {
+      if (Array.isArray(options.exclude)) {
+        options.exclude.forEach((selector) => builder.exclude(selector));
+      } else {
+        builder.exclude(options.exclude);
+      }
+    }
     if (options?.disableRules) builder.disableRules(options.disableRules);
     const results = await builder.analyze();
 
