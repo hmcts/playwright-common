@@ -2,7 +2,7 @@
 
 This repository is a shared playwright package for use within HMCTS. The below list is available from this package:
 
-- **Page Objects & Components**: Common page objects and components used within HMCTS that are not unique.
+- **Shared Page Objects & Components**: Page objects and components commonly used across multiple HMCTS teams or services. This excludes those created and used exclusively within a single team or service.
 - **Configuration**: Configuration for playwright: common config, project config & linting
 - **Utilities**: Commonly used logic for interacting with HMCTS pages, API's or playwright.
 
