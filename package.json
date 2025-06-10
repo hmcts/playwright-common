@@ -1,7 +1,7 @@
 {
   "name": "@hmcts/playwright-common",
   "description": "Common library for Playwright tests",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "author": "HMCTS",
   "license": "MIT",
   "repository": {
@@ -39,5 +39,5 @@
     "build:package": "yarn build && yarn pack",
     "lint": "yarn eslint ."
   },
-  "packageManager": "yarn@4.9.1"
+  "packageManager": "yarn@4.9.2"
 }
