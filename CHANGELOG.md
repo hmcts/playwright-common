@@ -3,6 +3,10 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.21]
+
+- Added: ConfigUtils class with "getEnvVar" which can be used to ensure environment variables are present prior to test execution.
+
 ## [1.0.20]
 
 - Move devDeps to dependencies due to missing modules
@@ -42,7 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.20]: https://github.com/hmcts/playwright-common/compare/v1.0.20...HEAD
+[1.0.21]: https://github.com/hmcts/playwright-common/compare/v1.0.21...HEAD
+[1.0.20]: https://github.com/hmcts/playwright-common/compare/v1.0.20...v1.0.21
 [1.0.19]: https://github.com/hmcts/playwright-common/compare/v1.0.19...v1.0.20
 [1.0.18]: https://github.com/hmcts/playwright-common/compare/v1.0.18...v1.0.19
 [1.0.17]: https://github.com/hmcts/playwright-common/compare/v1.0.17...v1.0.18
