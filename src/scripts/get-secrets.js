@@ -8,8 +8,8 @@ import path from "path";
 // Requires: Azure CLI & JQ (brew install azure-cli jq)
 
 // Configuration
-const EXAMPLE_ENV_FILE = ".env.example";
-const ENV_FILE = ".env";
+const DEFAULT_EXAMPLE_ENV_FILE = ".env.example";
+const DEFAULT_ENV_FILE = ".env";
 
 function getTaggedSecrets(keyVaultName) {
   const secretsMap = {};
@@ -40,13 +40,13 @@ function getTaggedSecrets(keyVaultName) {
   return secretsMap;
 }
 
-function updateEnvFile(secretsMap) {
-  if (!fs.existsSync(EXAMPLE_ENV_FILE)) {
-    console.error(`${EXAMPLE_ENV_FILE} file not found.`);
+function updateEnvFile(secretsMap, exampleEnvFilePath, envFilePath) {
+  if (!fs.existsSync(exampleEnvFilePath)) {
+    console.error(`${exampleEnvFilePath} file not found.`);
     process.exit(1);
   }
 
-  const exampleContent = fs.readFileSync(EXAMPLE_ENV_FILE, "utf-8");
+  const exampleContent = fs.readFileSync(exampleEnvFilePath, "utf-8");
   const lines = exampleContent.split(/\r?\n/);
 
   const updatedLines = lines.map((line) => {
@@ -58,14 +58,26 @@ function updateEnvFile(secretsMap) {
     return line;
   });
 
-  fs.writeFileSync(ENV_FILE, updatedLines.join("\n"), "utf-8");
-  console.log(`${ENV_FILE} file created successfully.`);
+  fs.writeFileSync(envFilePath, updatedLines.join("\n"), "utf-8");
+  console.log(`${envFilePath} file created successfully.`);
 }
 
-export function populateSecrets(keyVaultName) {
+/**
+ * Populates the .env file with secrets from Azure key vault. Maintains the structure of the .env.example file.
+ *
+ * @param keyVaultName {@link string} - The name of the Azure Key Vault to fetch secrets from
+ * @param exampleEnvFilePath {@link string} - Path to the example .env file (optional, default is .env.example)
+ * @param envFilePath {@link string} - Path to the .env file (optional, default is .env)
+ *
+ */
+export function populateSecrets(
+  keyVaultName,
+  exampleEnvFilePath = DEFAULT_EXAMPLE_ENV_FILE,
+  envFilePath = DEFAULT_ENV_FILE
+) {
   try {
     const secrets = getTaggedSecrets(keyVaultName);
-    updateEnvFile(secrets);
+    updateEnvFile(secrets, exampleEnvFilePath, envFilePath);
   } catch (err) {
     console.error("Error:", err.message);
     process.exit(1);
