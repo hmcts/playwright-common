@@ -16,5 +16,6 @@ export { TableUtils } from "./utils/table.utils.js";
 export { ValidatorUtils } from "./utils/validator.utils.js";
 export { WaitUtils } from "./utils/wait.utils.js";
 export { ConfigUtils } from "./utils/config.utils.js";
+export { IdamUtils } from "./utils/idam.utils.js"
 
 export { populateSecrets } from "./scripts/get-secrets.js";
