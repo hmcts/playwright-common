@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.23]
 
 - Added: IdamUtils which can be used by teams to create users
+    - to use IdamUtils class, you need to set up two env variables in your repo: `IDAM_WEB_URL` and `IDAM_TESTING_SUPPORT_URL` (see README.md for more details)
 
 ## [1.0.22]
 

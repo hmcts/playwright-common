@@ -32,6 +32,26 @@ yarn install
 yarn setup
 ```
 
+### Mandatory Requirements
+
+To use the `IdamUtils` class, you must configure the following environment variables in your repository:
+
+- `IDAM_WEB_URL`  
+- `IDAM_TESTING_SUPPORT_URL`
+
+These values will vary depending on the environment you are testing against:
+
+**For AAT environment:**
+```env
+IDAM_WEB_URL=https://idam-web-public.aat.platform.hmcts.net  
+IDAM_TESTING_SUPPORT_URL=https://idam-testing-support-api.aat.platform.hmcts.net
+```
+**For DEMO environment:**
+```env
+IDAM_WEB_URL=https://idam-web-public.demo.platform.hmcts.net  
+IDAM_TESTING_SUPPORT_URL=https://idam-testing-support-api.demo.platform.hmcts.net
+```
+
 ### Testing Changes
 
 See [Contribution Guide](./CONTRIBUTING.md) for more info regarding testing changes & creating new release.
