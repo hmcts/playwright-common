@@ -11,23 +11,22 @@ export interface IdamTokenParams {
 }
 
 export interface CreateUserParams {
-    bearerToken: string;
-    password: string;
-        user: {
-          email: string;
-          forename: string;
-          surname: string;
-          roleNames: string[];
-        },
+  bearerToken: string;
+  password: string;
+  user: {
+    email: string;
+    forename: string;
+    surname: string;
+    roleNames: string[];
+  };
 }
 
 export interface CreatedUser {
-    email: string;
-    password: string;
-    forename: string;
-    surname: string;
-  }
-  
+  email: string;
+  password: string;
+  forename: string;
+  surname: string;
+}
 
 /**
  * Utility class to interact with HMCTS IDAM APIs.
@@ -43,7 +42,7 @@ export class IdamUtils {
 
     if (!this.idamWebUrl || !this.idamTestingSupportUrl) {
       throw new Error(
-        "Missing required environment variables: IDAM_WEB_URL and/or IDAM_TESTING_SUPPORT_URL"
+        "Missing required environment variables: IDAM_WEB_URL and/or IDAM_TESTING_SUPPORT_URL",
       );
     }
   }
@@ -70,7 +69,6 @@ export class IdamUtils {
       username: payload.username ?? "",
       password: payload.password ?? "",
       redirectUri: payload.redirectUri ?? "",
-
     };
 
     const apiContext = await this.createApiContext();
@@ -83,14 +81,16 @@ export class IdamUtils {
 
       if (!response.ok()) {
         const errorText = await response.text();
-        throw new Error(`Failed to fetch access token: ${response.status()} - ${errorText}.`);
+        throw new Error(
+          `Failed to fetch access token: ${response.status()} - ${errorText}.`,
+        );
       }
 
       const json = await response.json();
       return json.access_token;
     } catch (error) {
       throw new Error(
-        `Error while fetching token: ${error instanceof Error ? error.message : String(error)}`
+        `Error while fetching token: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -130,7 +130,7 @@ export class IdamUtils {
     }
 
     throw new Error(
-      `Failed to create user: ${await response.text()} (Status Code: ${response.status()})`
+      `Failed to create user: ${await response.text()} (Status Code: ${response.status()})`,
     );
   }
 }
