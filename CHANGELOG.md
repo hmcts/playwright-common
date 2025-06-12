@@ -3,9 +3,19 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.23]
+## [1.0.24]
 
 - Allow passing path of .env and .env.example files in get secrets script
+
+## [1.0.23]
+
+- Added: IdamUtils which can be used by teams to create users
+  - to use IdamUtils class, you need to set up two env variables in your repo: `IDAM_WEB_URL` and `IDAM_TESTING_SUPPORT_URL` (see README.md for more details)
+
+## [1.0.23]
+
+- Added: IdamUtils which can be used by teams to create users
+  - to use IdamUtils class, you need to set up two env variables in your repo: `IDAM_WEB_URL` and `IDAM_TESTING_SUPPORT_URL` (see README.md for more details)
 
 ## [1.0.22]
 
@@ -54,7 +64,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.22]: https://github.com/hmcts/playwright-common/compare/v1.0.22...HEAD
+[1.0.24]: https://github.com/hmcts/playwright-common/compare/v1.0.24...HEAD
+[1.0.23]: https://github.com/hmcts/playwright-common/compare/v1.0.23...v1.0.24
+[1.0.22]: https://github.com/hmcts/playwright-common/compare/v1.0.22...v1.0.23
 [1.0.21]: https://github.com/hmcts/playwright-common/compare/v1.0.21...v1.0.22
 [1.0.20]: https://github.com/hmcts/playwright-common/compare/v1.0.20...v1.0.21
 [1.0.19]: https://github.com/hmcts/playwright-common/compare/v1.0.19...v1.0.20
