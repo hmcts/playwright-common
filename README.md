@@ -33,7 +33,9 @@ yarn setup
 ```
 
 ### Mandatory Requirements
+This library is configuration-driven meaning it relies on environment variables or other configuration that must be defined in the consuming test project as this config could be specific to a service or you may be using different environments. You'll need to set up any necessary config such as env vars in your own test project. 
 
+#### IdamUtils Requirements
 To use the `IdamUtils` class, you must configure the following environment variables in your repository:
 
 - `IDAM_WEB_URL`  

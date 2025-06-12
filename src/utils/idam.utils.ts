@@ -1,26 +1,33 @@
 import { APIRequestContext, request } from "@playwright/test";
 
-export interface IdamTokenBaseParams {
+export interface IdamTokenParams {
   grantType: string;
   clientId: string;
   clientSecret: string;
   scope: string;
-}
-
-export interface IdamTokenParams extends IdamTokenBaseParams {
   username?: string;
   password?: string;
   redirectUri?: string;
 }
 
 export interface CreateUserParams {
-  bearerToken: string;
-  email: string;
-  password: string;
-  forename: string;
-  surname: string;
-  roleNames: string[];
+    bearerToken: string;
+    password: string;
+        user: {
+          email: string;
+          forename: string;
+          surname: string;
+          roleNames: string[];
+        },
 }
+
+export interface CreatedUser {
+    email: string;
+    password: string;
+    forename: string;
+    surname: string;
+  }
+  
 
 /**
  * Utility class to interact with HMCTS IDAM APIs.
@@ -50,21 +57,21 @@ export class IdamUtils {
    * Should be called once at the beginning of a test run (for example in global.setup.ts).
    * Token valid for up to 8 hours.
    *
-   * @param options - The parameters required to generate the token.
+   * @param payload {@link IdamTokenParams} - The form data required to generate the token.
    */
-  public async generateIdamToken(options: IdamTokenParams): Promise<string> {
+  public async generateIdamToken(payload: IdamTokenParams): Promise<string> {
     const url = `${this.idamWebUrl}/o/token`;
 
     const data: Record<string, string> = {
-      grant_type: options.grantType,
-      client_id: options.clientId,
-      client_secret: options.clientSecret,
-      scope: options.scope,
-    };
+      grant_type: payload.grantType,
+      client_id: payload.clientId,
+      client_secret: payload.clientSecret,
+      scope: payload.scope,
+      username: payload.username ?? "",
+      password: payload.password ?? "",
+      redirectUri: payload.redirectUri ?? "",
 
-    if (options.username) data.username = options.username;
-    if (options.password) data.password = options.password;
-    if (options.redirectUri) data.redirect_uri = options.redirectUri;
+    };
 
     const apiContext = await this.createApiContext();
 
@@ -91,34 +98,34 @@ export class IdamUtils {
   /**
    * Creates a test user in IDAM with specified roles.
    *
-   * @param options - The parameters required to create the user.
+   * @param payload {@link CreateUserParams} - The payload required to create the user.
    */
-  public async createUser(options: CreateUserParams) {
+  public async createUser(payload: CreateUserParams): Promise<CreatedUser> {
     const url = `${this.idamTestingSupportUrl}/test/idam/users`;
     const apiContext = await this.createApiContext();
 
     const response = await apiContext.post(url, {
       headers: {
-        Authorization: `Bearer ${options.bearerToken}`,
+        Authorization: `Bearer ${payload.bearerToken}`,
         "Content-Type": "application/json",
       },
       data: {
-        password: options.password,
+        password: payload.password,
         user: {
-          email: options.email,
-          forename: options.forename,
-          surname: options.surname,
-          roleNames: options.roleNames,
+          email: payload.user.email,
+          forename: payload.user.forename,
+          surname: payload.user.surname,
+          roleNames: payload.user.roleNames,
         },
       },
     });
 
     if (response.status() === 201) {
       return {
-        email: options.email,
-        password: options.password,
-        forename: options.forename,
-        surname: options.surname,
+        email: payload.user.email,
+        password: payload.password,
+        forename: payload.user.forename,
+        surname: payload.user.surname,
       };
     }
 
