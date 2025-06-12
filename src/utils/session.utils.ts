@@ -19,7 +19,7 @@ export class SessionUtils {
    * Opens a new browser context and returns the page
    *
    * @param path {@link string} - path of the session file
-   * @param cookieNmae {@link string} - name of the cookie used for session validation
+   * @param cookieName {@link string} - name of the cookie used for session validation
    *
    */
   public static isSessionValid(path: string, cookieName: string): boolean {
