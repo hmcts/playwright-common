@@ -3,7 +3,7 @@ import { Page } from "@playwright/test";
 export interface UserCredentials {
   username: string;
   password: string;
-  sessionFile: string;
+  sessionFile?: string;
   cookieName?: string;
 }
 export class IdamPage {
@@ -20,7 +20,7 @@ export class IdamPage {
     await this.usernameInput.fill(user.username);
     await this.passwordInput.fill(user.password);
     await this.submitBtn.click();
-    await this.saveSession(user);
+    if (user.sessionFile) await this.saveSession(user);
   }
 
   private async saveSession(user: UserCredentials) {
