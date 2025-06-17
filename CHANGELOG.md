@@ -5,6 +5,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.25]
 
+- Added: LocaleUtils added to help with localisation testing
+
+## [1.0.25]
+
 - Change: session file is now optional for idam.po.ts
 
 ## [1.0.24]
@@ -63,7 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.25]: https://github.com/hmcts/playwright-common/compare/v1.0.25...HEAD
+[1.0.26]: https://github.com/hmcts/playwright-common/compare/v1.0.26...HEAD
+[1.0.25]: https://github.com/hmcts/playwright-common/compare/v1.0.25...v1.0.26
 [1.0.24]: https://github.com/hmcts/playwright-common/compare/v1.0.24...v1.0.25
 [1.0.23]: https://github.com/hmcts/playwright-common/compare/v1.0.23...v1.0.24
 [1.0.22]: https://github.com/hmcts/playwright-common/compare/v1.0.22...v1.0.23
