@@ -9,7 +9,7 @@ export class LocaleUtils {
   constructor(private page: Page) {}
 
   /**
-   * Opens a new browser context and returns the page
+   * Takes a locale and appends it to the current URL, or if a locale is already present it is replaced.
    *
    * @param locale {@link Locale} - enum representing supported locales
    *
