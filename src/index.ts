@@ -10,12 +10,13 @@ export { IdamPage } from "./page-objects/pages/idam.po.js";
 
 export { AxeUtils } from "./utils/axe.utils.js";
 export { BrowserUtils } from "./utils/browser.utils.js";
+export { ConfigUtils } from "./utils/config.utils.js";
+export { IdamUtils } from "./utils/idam.utils.js";
 export { LighthouseUtils } from "./utils/lighthouse.utils.js";
+export { Locale, LocaleUtils } from "./utils/locale.utils.js";
 export { SessionUtils } from "./utils/session.utils.js";
 export { TableUtils } from "./utils/table.utils.js";
 export { ValidatorUtils } from "./utils/validator.utils.js";
 export { WaitUtils } from "./utils/wait.utils.js";
-export { ConfigUtils } from "./utils/config.utils.js";
-export { IdamUtils } from "./utils/idam.utils.js"
 
 export { populateSecrets } from "./scripts/get-secrets.js";
