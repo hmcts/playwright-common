@@ -5,7 +5,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.27]
 
-- Fix: moved `@playwright/test`, `playwright`, and `playwright-core` to `peerDependencies` to prevent multiple versions being loaded at runtime.
+- Fix: moved `@playwright/test` to `peerDependencies` & `devDependencies` to prevent multiple versions being loaded at runtime.
 
 ## [1.0.26]
 
