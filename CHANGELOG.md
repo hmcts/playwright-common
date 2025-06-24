@@ -3,7 +3,11 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.25]
+## [1.0.27]
+
+- Fix: moved `@playwright/test`, `playwright`, and `playwright-core` to `peerDependencies` to prevent multiple versions being loaded at runtime.
+
+## [1.0.26]
 
 - Added: LocaleUtils added to help with localisation testing
 
@@ -67,7 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.26]: https://github.com/hmcts/playwright-common/compare/v1.0.26...HEAD
+[1.0.27]: https://github.com/hmcts/playwright-common/compare/v1.0.27...HEAD
+[1.0.26]: https://github.com/hmcts/playwright-common/compare/v1.0.26...v1.0.27
 [1.0.25]: https://github.com/hmcts/playwright-common/compare/v1.0.25...v1.0.26
 [1.0.24]: https://github.com/hmcts/playwright-common/compare/v1.0.24...v1.0.25
 [1.0.23]: https://github.com/hmcts/playwright-common/compare/v1.0.23...v1.0.24
