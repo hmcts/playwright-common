@@ -28,6 +28,10 @@ export interface CreatedUser {
   surname: string;
 }
 
+export interface ServiceTokenParams {
+  microservice: string;
+}
+
 /**
  * Utility class to interact with HMCTS IDAM APIs.
  * Provides methods to generate bearer tokens and create test users.
@@ -35,14 +39,14 @@ export interface CreatedUser {
 export class IdamUtils {
   private readonly idamWebUrl: string;
   private readonly idamTestingSupportUrl: string;
-
+  private readonly idamServiceAuthUrl: string
   constructor() {
     this.idamWebUrl = process.env.IDAM_WEB_URL ?? "";
     this.idamTestingSupportUrl = process.env.IDAM_TESTING_SUPPORT_URL ?? "";
-
-    if (!this.idamWebUrl || !this.idamTestingSupportUrl) {
+    this.idamServiceAuthUrl = process.env.IDAM_S2S_URL ?? "";
+    if (!this.idamWebUrl || !this.idamTestingSupportUrl || !this.idamServiceAuthUrl) {
       throw new Error(
-        "Missing required environment variables: IDAM_WEB_URL and/or IDAM_TESTING_SUPPORT_URL",
+        "Missing required environment variables: IDAM_WEB_URL, IDAM_TESTING_SUPPORT_URL and/or IDAM_S2S_URL",
       );
     }
   }
@@ -132,5 +136,40 @@ export class IdamUtils {
     throw new Error(
       `Failed to create user: ${await response.text()} (Status Code: ${response.status()})`,
     );
+  }
+  /**
+   * Retrieves a Service Auth token.
+   *
+   * @param payload {@link ServiceTokenParams} - The form data required to retrieve the token.
+   */
+  public async retrieveServiceAuthToken(payload: ServiceTokenParams): Promise<string> {
+    const apiContext = await this.createApiContext();
+
+    try {
+      const response = await apiContext.post(this.idamServiceAuthUrl, {
+        headers: {
+          "content-type": "application/json",
+          Accept: "*/*",
+        },
+        data: {
+          microservice: payload.microservice,
+        },
+      });
+
+      if (!response.ok()) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to fetch S2S token: ${response.status()} - ${errorText}. Ensure your VPN is connected or check your URL/SECRET.`
+        );
+      }
+
+      return response.text();
+    } catch (error) {
+      throw new Error(
+        `An error occurred while fetching the access token: ${
+          error instanceof Error ? error.message : error
+        }`
+      );
+    }
   }
 }
