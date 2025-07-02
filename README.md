@@ -54,7 +54,7 @@ IDAM_S2S_URL = http://rpe-service-auth-provider-aat.service.core-compute-aat.int
 ```env
 IDAM_WEB_URL=https://idam-web-public.demo.platform.hmcts.net  
 IDAM_TESTING_SUPPORT_URL=https://idam-testing-support-api.demo.platform.hmcts.net
-IDAM_S2S_URL = http://rpe-service-auth-provider-demo.service.core-compute-aat.internal/testing-support/lease
+IDAM_S2S_URL = http://rpe-service-auth-provider-demo.service.core-compute-demo.internal/testing-support/lease
 ```
 
 ### Testing Changes
