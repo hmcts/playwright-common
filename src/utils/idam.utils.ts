@@ -22,6 +22,7 @@ export interface CreateUserParams {
 }
 
 export interface CreatedUser {
+  id: string;
   email: string;
   password: string;
   forename: string;
@@ -30,6 +31,19 @@ export interface CreatedUser {
 
 export interface ServiceTokenParams {
   microservice: string;
+}
+
+export type GetUserInfoParams =
+  | { email: string; id?: never; bearerToken: string }
+  | { id: string; email?: never; bearerToken: string };
+
+export interface UserInfoParams { 
+  id: string,
+  email: string,
+  forename: string,
+  surname: string,
+  displayName: string,
+  roleNames: string[];
 }
 
 /**
@@ -123,9 +137,10 @@ export class IdamUtils {
         },
       },
     });
-
+    const json = await response.json();
     if (response.status() === 201) {
       return {
+        id: json.id,
         email: payload.user.email,
         password: payload.password,
         forename: payload.user.forename,
@@ -137,6 +152,7 @@ export class IdamUtils {
       `Failed to create user: ${await response.text()} (Status Code: ${response.status()})`,
     );
   }
+
   /**
    * Retrieves a Service Auth token.
    *
@@ -172,4 +188,45 @@ export class IdamUtils {
       );
     }
   }
-}
+
+  /**
+   * Gets user info based on user email OR id provided.
+   *
+   * @param payload {@link GetUserInfoParams} - The payload required to get user information.
+   */
+  public async getUserInfo(payload: GetUserInfoParams): Promise<UserInfoParams> {
+    let url: string;
+    if ((payload.email && payload.id) || (!payload.email && !payload.id)) {
+      throw new Error('You must provide either an email or an id, but not both.');
+    }
+    if (payload.email) {
+      url = `${this.idamTestingSupportUrl}/test/idam/users?email=${encodeURIComponent(payload.email)}`;
+    } else {
+      url = `${this.idamTestingSupportUrl}/test/idam/users/${payload.id}`;
+    }
+    
+    const apiContext = await this.createApiContext();
+    const response = await apiContext.get(url, {
+      headers: {
+        Authorization: `Bearer ${payload.bearerToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+  
+    if (!response.ok()) {
+      throw new Error(
+        `Failed to fetch user info: ${await response.text()} (Status Code: ${response.status()})`
+      );
+    }
+  
+    const json = await response.json();
+    return {
+      id: json.id,
+      email: json.email,
+      forename: json.forename,
+      surname: json.surname,
+      displayName: json.displayName,
+      roleNames: json.roleNames,
+    };
+  }
+}  
