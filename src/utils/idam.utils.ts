@@ -43,7 +43,7 @@ export interface UserInfoParams {
   forename: string,
   surname: string,
   displayName: string,
-  roleNames: [string],
+  roleNames: string[];
 }
 
 /**
