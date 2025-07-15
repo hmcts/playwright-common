@@ -40,7 +40,7 @@ To use the `IdamUtils` class, you must configure the following environment varia
 
 - `IDAM_WEB_URL`  
 - `IDAM_TESTING_SUPPORT_URL`
-- `IDAM_S2S_URL`
+
 
 These values will vary depending on the environment you are testing against:
 
@@ -48,13 +48,24 @@ These values will vary depending on the environment you are testing against:
 ```env
 IDAM_WEB_URL=https://idam-web-public.aat.platform.hmcts.net  
 IDAM_TESTING_SUPPORT_URL=https://idam-testing-support-api.aat.platform.hmcts.net
-IDAM_S2S_URL = http://rpe-service-auth-provider-aat.service.core-compute-aat.internal/testing-support/lease 
 ```
 **For DEMO environment:**
 ```env
 IDAM_WEB_URL=https://idam-web-public.demo.platform.hmcts.net  
 IDAM_TESTING_SUPPORT_URL=https://idam-testing-support-api.demo.platform.hmcts.net
-IDAM_S2S_URL = http://rpe-service-auth-provider-demo.service.core-compute-demo.internal/testing-support/lease
+```
+#### CaseUtils Requirements
+To use the `CaseUtils` class, you must configure the following environment variables in your repository:
+
+- `S2S_URL`  
+
+**For AAT environment:**
+```env
+S2S_URL = http://rpe-service-auth-provider-aat.service.core-compute-aat.internal/testing-support/lease 
+```
+**For DEMO environment:**
+```env
+S2S_URL = http://rpe-service-auth-provider-demo.service.core-compute-demo.internal/testing-support/lease
 ```
 
 ### Testing Changes
