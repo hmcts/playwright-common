@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.30]
 
 - Added "user.id" in the CreateUserParams in IdamUtils
-- Move service token retrieval to case.utils.ts
+- Move service token retrieval to service-auth.utils.ts
 
 ## [1.0.29]
 
@@ -88,8 +88,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.29]: https://github.com/hmcts/playwright-common/compare/v1.0.30...HEAD
-[1.0.28]: https://github.com/hmcts/playwright-common/compare/v1.0.29...v1.0.30
+[1.0.30]: https://github.com/hmcts/playwright-common/compare/v1.0.30...HEAD
+[1.0.29]: https://github.com/hmcts/playwright-common/compare/v1.0.29...v1.0.30
 [1.0.28]: https://github.com/hmcts/playwright-common/compare/v1.0.28...v1.0.29
 [1.0.27]: https://github.com/hmcts/playwright-common/compare/v1.0.27...v1.0.28
 [1.0.26]: https://github.com/hmcts/playwright-common/compare/v1.0.26...v1.0.27

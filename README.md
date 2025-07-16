@@ -54,8 +54,8 @@ IDAM_TESTING_SUPPORT_URL=https://idam-testing-support-api.aat.platform.hmcts.net
 IDAM_WEB_URL=https://idam-web-public.demo.platform.hmcts.net  
 IDAM_TESTING_SUPPORT_URL=https://idam-testing-support-api.demo.platform.hmcts.net
 ```
-#### CaseUtils Requirements
-To use the `CaseUtils` class, you must configure the following environment variables in your repository:
+#### ServiceAuthUtils Requirements
+To use the `ServiceAuthUtils` class, you must configure the following environment variables in your repository:
 
 - `S2S_URL`  
 
