@@ -4,7 +4,7 @@ export interface ServiceTokenParams {
   microservice: string;
 }
 
-export class CaseUtils {
+export class ServiceAuthUtils {
   private readonly serviceAuthUrl: string;
   constructor() {
     this.serviceAuthUrl = process.env.S2S_URL ?? "";
@@ -22,9 +22,7 @@ export class CaseUtils {
     return await request.newContext();
   }
 
-  public async retrieveServiceAuthToken(
-    payload: ServiceTokenParams
-  ): Promise<string> {
+  public async retrieveToken(payload: ServiceTokenParams): Promise<string> {
     const apiContext = await this.createApiContext();
 
     try {
