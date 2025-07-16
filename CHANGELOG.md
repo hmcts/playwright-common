@@ -3,6 +3,10 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.31]
+
+- Fixed the publish release workflow to ensure `latest` tag is applied to newest versions
+
 ## [1.0.30]
 
 - Added "user.id" in the CreateUserParams in IdamUtils
@@ -14,11 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.28]
 
-- Added method to IdamUtils - can be used to retrieve service auth token. UPDATE: to use IdamUtils class, you need to set up THREE env variables in your repo: 
+- Added method to IdamUtils - can be used to retrieve service auth token. UPDATE: to use IdamUtils class, you need to set up THREE env variables in your repo:
   - `IDAM_WEB_URL`
   - `IDAM_TESTING_SUPPORT_URL`
   - `IDAM_S2S_URL`
-  (see README.md for more details)
+    (see README.md for more details)
 
 ## [1.0.27]
 
@@ -88,7 +92,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.30]: https://github.com/hmcts/playwright-common/compare/v1.0.30...HEAD
+[1.0.31]: https://github.com/hmcts/playwright-common/compare/v1.0.31...HEAD
+[1.0.30]: https://github.com/hmcts/playwright-common/compare/v1.0.30...v1.0.31
 [1.0.29]: https://github.com/hmcts/playwright-common/compare/v1.0.29...v1.0.30
 [1.0.28]: https://github.com/hmcts/playwright-common/compare/v1.0.28...v1.0.29
 [1.0.27]: https://github.com/hmcts/playwright-common/compare/v1.0.27...v1.0.28
