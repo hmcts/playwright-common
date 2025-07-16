@@ -14,6 +14,7 @@ export interface CreateUserParams {
   bearerToken: string;
   password: string;
   user: {
+    id?: string;
     email: string;
     forename: string;
     surname: string;
@@ -29,20 +30,16 @@ export interface CreatedUser {
   surname: string;
 }
 
-export interface ServiceTokenParams {
-  microservice: string;
-}
-
 export type GetUserInfoParams =
   | { email: string; id?: never; bearerToken: string }
   | { id: string; email?: never; bearerToken: string };
 
-export interface UserInfoParams { 
-  id: string,
-  email: string,
-  forename: string,
-  surname: string,
-  displayName: string,
+export interface UserInfoParams {
+  id?: string;
+  email: string;
+  forename: string;
+  surname: string;
+  displayName: string;
   roleNames: string[];
 }
 
@@ -53,14 +50,14 @@ export interface UserInfoParams {
 export class IdamUtils {
   private readonly idamWebUrl: string;
   private readonly idamTestingSupportUrl: string;
-  private readonly idamServiceAuthUrl: string
+
   constructor() {
     this.idamWebUrl = process.env.IDAM_WEB_URL ?? "";
     this.idamTestingSupportUrl = process.env.IDAM_TESTING_SUPPORT_URL ?? "";
-    this.idamServiceAuthUrl = process.env.IDAM_S2S_URL ?? "";
-    if (!this.idamWebUrl || !this.idamTestingSupportUrl || !this.idamServiceAuthUrl) {
+
+    if (!this.idamWebUrl || !this.idamTestingSupportUrl) {
       throw new Error(
-        "Missing required environment variables: IDAM_WEB_URL, IDAM_TESTING_SUPPORT_URL and/or IDAM_S2S_URL",
+        "Missing required environment variables: IDAM_WEB_URL and/or IDAM_TESTING_SUPPORT_URL"
       );
     }
   }
@@ -100,7 +97,7 @@ export class IdamUtils {
       if (!response.ok()) {
         const errorText = await response.text();
         throw new Error(
-          `Failed to fetch access token: ${response.status()} - ${errorText}.`,
+          `Failed to fetch access token: ${response.status()} - ${errorText}.`
         );
       }
 
@@ -108,7 +105,9 @@ export class IdamUtils {
       return json.access_token;
     } catch (error) {
       throw new Error(
-        `Error while fetching token: ${error instanceof Error ? error.message : String(error)}`,
+        `Error while fetching token: ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
     }
   }
@@ -130,6 +129,7 @@ export class IdamUtils {
       data: {
         password: payload.password,
         user: {
+          id: payload.user.id,
           email: payload.user.email,
           forename: payload.user.forename,
           surname: payload.user.surname,
@@ -149,44 +149,8 @@ export class IdamUtils {
     }
 
     throw new Error(
-      `Failed to create user: ${await response.text()} (Status Code: ${response.status()})`,
+      `Failed to create user: ${await response.text()} (Status Code: ${response.status()})`
     );
-  }
-
-  /**
-   * Retrieves a Service Auth token.
-   *
-   * @param payload {@link ServiceTokenParams} - The form data required to retrieve the token.
-   */
-  public async retrieveServiceAuthToken(payload: ServiceTokenParams): Promise<string> {
-    const apiContext = await this.createApiContext();
-
-    try {
-      const response = await apiContext.post(this.idamServiceAuthUrl, {
-        headers: {
-          "content-type": "application/json",
-          Accept: "*/*",
-        },
-        data: {
-          microservice: payload.microservice,
-        },
-      });
-
-      if (!response.ok()) {
-        const errorText = await response.text();
-        throw new Error(
-          `Failed to fetch S2S token: ${response.status()} - ${errorText}. Ensure your VPN is connected or check your URL/SECRET.`
-        );
-      }
-
-      return response.text();
-    } catch (error) {
-      throw new Error(
-        `An error occurred while fetching the access token: ${
-          error instanceof Error ? error.message : error
-        }`
-      );
-    }
   }
 
   /**
@@ -194,31 +158,37 @@ export class IdamUtils {
    *
    * @param payload {@link GetUserInfoParams} - The payload required to get user information.
    */
-  public async getUserInfo(payload: GetUserInfoParams): Promise<UserInfoParams> {
+  public async getUserInfo(
+    payload: GetUserInfoParams
+  ): Promise<UserInfoParams> {
     let url: string;
     if ((payload.email && payload.id) || (!payload.email && !payload.id)) {
-      throw new Error('You must provide either an email or an id, but not both.');
+      throw new Error(
+        "You must provide either an email or an id, but not both."
+      );
     }
     if (payload.email) {
-      url = `${this.idamTestingSupportUrl}/test/idam/users?email=${encodeURIComponent(payload.email)}`;
+      url = `${
+        this.idamTestingSupportUrl
+      }/test/idam/users?email=${encodeURIComponent(payload.email)}`;
     } else {
       url = `${this.idamTestingSupportUrl}/test/idam/users/${payload.id}`;
     }
-    
+
     const apiContext = await this.createApiContext();
     const response = await apiContext.get(url, {
       headers: {
         Authorization: `Bearer ${payload.bearerToken}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
-  
+
     if (!response.ok()) {
       throw new Error(
         `Failed to fetch user info: ${await response.text()} (Status Code: ${response.status()})`
       );
     }
-  
+
     const json = await response.json();
     return {
       id: json.id,
@@ -229,4 +199,4 @@ export class IdamUtils {
       roleNames: json.roleNames,
     };
   }
-}  
+}
