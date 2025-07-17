@@ -3,6 +3,10 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.32]
+
+- Removed playwright and playwright-core packages as they are not needed and were causing duplication issues
+
 ## [1.0.31]
 
 - Fixed the publish release workflow to ensure `latest` tag is applied to newest versions
@@ -92,7 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.31]: https://github.com/hmcts/playwright-common/compare/v1.0.31...HEAD
+[1.0.32]: https://github.com/hmcts/playwright-common/compare/v1.0.32...HEAD
+[1.0.31]: https://github.com/hmcts/playwright-common/compare/v1.0.31...v1.0.32
 [1.0.30]: https://github.com/hmcts/playwright-common/compare/v1.0.30...v1.0.31
 [1.0.29]: https://github.com/hmcts/playwright-common/compare/v1.0.29...v1.0.30
 [1.0.28]: https://github.com/hmcts/playwright-common/compare/v1.0.28...v1.0.29
