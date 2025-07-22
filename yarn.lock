@@ -163,7 +163,7 @@ __metadata:
     "@types/node": "npm:^24.0.8"
     "@typescript-eslint/eslint-plugin": "npm:^8.8.0"
     eslint: "npm:^9.11.1"
-    eslint-plugin-playwright: "npm:^1.6.2"
+    eslint-plugin-playwright: "npm:^2.0.0"
     get-port: "npm:^7.1.0"
     globals: "npm:^15.10.0"
     lighthouse: "npm:^12.2.1"
@@ -1578,18 +1578,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-plugin-playwright@npm:^1.6.2":
-  version: 1.8.3
-  resolution: "eslint-plugin-playwright@npm:1.8.3"
+"eslint-plugin-playwright@npm:^2.0.0":
+  version: 2.2.0
+  resolution: "eslint-plugin-playwright@npm:2.2.0"
   dependencies:
     globals: "npm:^13.23.0"
   peerDependencies:
     eslint: ">=8.40.0"
-    eslint-plugin-jest: ">=25"
-  peerDependenciesMeta:
-    eslint-plugin-jest:
-      optional: true
-  checksum: 10c0/41c90ad82d7bfd336b11d88a7dd4aee3832878f3abc5df0c7e988124ac3d4e0ffc7de760f4e986a275bf088da2a360d177e8a48d6b3193dcb5f60b17138cf0fe
+  checksum: 10c0/508b817ff71ae9c9dbd07a40b11b5f81804b3a143e45d9397aa98a72dcde99527e473808117dbd5bbf6ef82666a76635e830f654a4628c1576628ed1ed512ee2
   languageName: node
   linkType: hard
 
