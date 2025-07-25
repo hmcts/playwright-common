@@ -25,7 +25,7 @@ export interface CreateUserParams {
     forename: string;
     surname: string;
     roleNames: string[];
-    id: string;
+    id?: string;
   };
 }
 
@@ -81,7 +81,14 @@ export class IdamUtils {
   private async createApiContext(): Promise<APIRequestContext> {
     return await request.newContext();
   }
-
+  
+  /**
+   * Generates an IDAM bearer token.
+   * Should be called once at the beginning of a test run (for example in global.setup.ts).
+   * Token valid for up to 8 hours.
+   *
+   * @param payload {@link IdamTokenParams} - The form data required to generate the token.
+   */
   public async generateIdamToken(payload: IdamTokenParams): Promise<string> {
     const url = `${this.idamWebUrl}/o/token`;
 
@@ -121,6 +128,11 @@ export class IdamUtils {
     }
   }
 
+  /**
+   * Creates a test user in IDAM with specified roles.
+   *
+   * @param payload {@link CreateUserParams} - The payload required to create the user.
+   */
   public async createUser(payload: CreateUserParams): Promise<CreatedUser> {
     const url = `${this.idamTestingSupportUrl}/test/idam/users`;
     const apiContext = await this.createApiContext();
@@ -158,6 +170,11 @@ export class IdamUtils {
     );
   }
 
+  /**
+   * Gets user info based on user email OR id provided.
+   *
+   * @param payload {@link GetUserInfoParams} - The payload required to get user information.
+   */
   public async getUserInfo(
     payload: GetUserInfoParams
   ): Promise<UserInfoParams> {
@@ -200,6 +217,11 @@ export class IdamUtils {
     };
   }
 
+  /**
+   * Updates a user based on the id
+   *
+   * @param payload {@link UpdateUserParams} - The payload required to get user information.
+   */
   public async updateUser(payload: UpdateUserParams): Promise<UpdatedUser> {
     const apiContext = await this.createApiContext();
     const url = `${this.idamTestingSupportUrl}/test/idam/users/${payload.id}`;
