@@ -1,5 +1,12 @@
 import { APIRequestContext, request } from "@playwright/test";
 
+interface UserBase {
+  email: string;
+  forename: string;
+  surname: string;
+  roleNames: string[];
+}
+
 export interface IdamTokenParams {
   grantType: string;
   clientId: string;
@@ -14,7 +21,33 @@ export interface CreateUserParams {
   bearerToken: string;
   password: string;
   user: {
+    email: string;
+    forename: string;
+    surname: string;
+    roleNames: string[];
     id?: string;
+  };
+}
+
+export interface CreatedUser extends UserBase {
+  id: string;
+  password: string;
+}
+
+export type GetUserInfoParams =
+  | { email: string; id?: never; bearerToken: string }
+  | { id: string; email?: never; bearerToken: string };
+
+export interface UserInfoParams extends UserBase {
+  id: string;
+  displayName: string;
+}
+
+export interface UpdateUserParams {
+  id: string;
+  bearerToken: string;
+  password: string;
+  user: {
     email: string;
     forename: string;
     surname: string;
@@ -22,31 +55,14 @@ export interface CreateUserParams {
   };
 }
 
-export interface CreatedUser {
+export interface UpdatedUser extends UserBase {
   id: string;
-  email: string;
-  password: string;
-  forename: string;
-  surname: string;
-}
-
-export type GetUserInfoParams =
-  | { email: string; id?: never; bearerToken: string }
-  | { id: string; email?: never; bearerToken: string };
-
-export interface UserInfoParams {
-  id?: string;
-  email: string;
-  forename: string;
-  surname: string;
   displayName: string;
-  roleNames: string[];
+  password?: string;
+  accountStatus: string;
+  recordType: string;
 }
 
-/**
- * Utility class to interact with HMCTS IDAM APIs.
- * Provides methods to generate bearer tokens and create test users.
- */
 export class IdamUtils {
   private readonly idamWebUrl: string;
   private readonly idamTestingSupportUrl: string;
@@ -65,7 +81,7 @@ export class IdamUtils {
   private async createApiContext(): Promise<APIRequestContext> {
     return await request.newContext();
   }
-
+  
   /**
    * Generates an IDAM bearer token.
    * Should be called once at the beginning of a test run (for example in global.setup.ts).
@@ -145,6 +161,7 @@ export class IdamUtils {
         password: payload.password,
         forename: payload.user.forename,
         surname: payload.user.surname,
+        roleNames: payload.user.roleNames,
       };
     }
 
@@ -198,5 +215,51 @@ export class IdamUtils {
       displayName: json.displayName,
       roleNames: json.roleNames,
     };
+  }
+
+  /**
+   * Updates a user based on the id
+   *
+   * @param payload {@link UpdateUserParams} - The payload required to get user information.
+   */
+  public async updateUser(payload: UpdateUserParams): Promise<UpdatedUser> {
+    const apiContext = await this.createApiContext();
+    const url = `${this.idamTestingSupportUrl}/test/idam/users/${payload.id}`;
+    const response = await apiContext.put(url, {
+      headers: {
+        Authorization: `Bearer ${payload.bearerToken}`,
+        "Content-Type": "application/json",
+      },
+      data: {
+        password: payload.password,
+        user: {
+          email: payload.user.email,
+          forename: payload.user.forename,
+          surname: payload.user.surname,
+          displayName: `${payload.user.forename} ${payload.user.surname}`,
+          roleNames: payload.user.roleNames,
+          accountStatus: "ACTIVE",
+          recordType: "LIVE",
+        },
+      },
+    });
+    const json = await response.json();
+    if (response.status() === 200) {
+      return {
+        id: json.id,
+        email: json.email,
+        password: json.password,
+        forename: json.forename,
+        surname: json.surname,
+        displayName: json.displayName,
+        roleNames: json.roleNames,
+        accountStatus: json.accountStatus,
+        recordType: json.recordType,
+      };
+    }
+
+    throw new Error(
+      `Failed to update user: ${await response.text()} (Status Code: ${response.status()})`
+    );
   }
 }
