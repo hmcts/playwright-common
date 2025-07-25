@@ -223,7 +223,6 @@ export class IdamUtils {
     });
     const json = await response.json();
     if (response.status() === 200) {
-      console.log(`User ${json.email} successfully updated.`);
       return {
         id: json.id,
         email: json.email,
