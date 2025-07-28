@@ -63,6 +63,10 @@ export interface UpdatedUser extends UserBase {
   recordType: string;
 }
 
+/**
+ * Utility class to interact with HMCTS IDAM APIs.
+ * Provides methods to generate bearer tokens and create test users.
+ */
 export class IdamUtils {
   private readonly idamWebUrl: string;
   private readonly idamTestingSupportUrl: string;
@@ -81,7 +85,7 @@ export class IdamUtils {
   private async createApiContext(): Promise<APIRequestContext> {
     return await request.newContext();
   }
-  
+
   /**
    * Generates an IDAM bearer token.
    * Should be called once at the beginning of a test run (for example in global.setup.ts).
