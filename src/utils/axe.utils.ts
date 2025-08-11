@@ -8,6 +8,11 @@ interface AuditOptions {
   disableRules?: string | string[];
 }
 
+interface AxeAuditResult {
+  url: string;
+  results: Awaited<ReturnType<AxeBuilder["analyze"]>>;
+}
+
 export class AxeUtils {
   private readonly DEFAULT_TAGS = [
     "wcag2a",
@@ -18,7 +23,7 @@ export class AxeUtils {
     "wcag22aa",
   ];
 
-  private resultsList: any[] = [];
+  private resultsList: AxeAuditResult[] = [];
 
   constructor(protected readonly page: Page) {}
 
