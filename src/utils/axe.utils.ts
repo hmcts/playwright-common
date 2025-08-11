@@ -1,8 +1,10 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { Page, expect } from "@playwright/test";
+import { Page, expect, TestInfo } from "@playwright/test";
+import { createHtmlReport } from "axe-html-reporter";
 
 interface AuditOptions {
   exclude?: string | string[];
+  include?: string | string[];
   disableRules?: string | string[];
 }
 
@@ -16,7 +18,20 @@ export class AxeUtils {
     "wcag22aa",
   ];
 
+  private resultsList: any[] = [];
+
   constructor(protected readonly page: Page) {}
+
+  private applySelectors(
+    builder: AxeBuilder,
+    method: "exclude" | "include",
+    selectors?: string | string[]
+  ) {
+    if (!selectors) return;
+    (Array.isArray(selectors) ? selectors : [selectors]).forEach((selector) =>
+      builder[method](selector)
+    );
+  }
 
   /**
    * Run the AxeBuilder checks using the pre-determined tags
@@ -28,15 +43,12 @@ export class AxeUtils {
     const builder = new AxeBuilder({ page: this.page }).withTags(
       this.DEFAULT_TAGS
     );
-    if (options?.exclude) {
-      if (Array.isArray(options.exclude)) {
-        options.exclude.forEach((selector) => builder.exclude(selector));
-      } else {
-        builder.exclude(options.exclude);
-      }
-    }
+    this.applySelectors(builder, "exclude", options?.exclude);
+    this.applySelectors(builder, "include", options?.include);
+
     if (options?.disableRules) builder.disableRules(options.disableRules);
     const results = await builder.analyze();
+    this.resultsList.push({ url: this.page.url(), results });
 
     if (process.env.PWDEBUG) {
       if (results.violations.length > 0) {
@@ -53,5 +65,57 @@ export class AxeUtils {
     }
 
     expect.soft(results.violations).toEqual([]);
+  }
+
+  /**
+   * Generate a consolidated HTML report of all accessibility results
+   * This will be attached to the test info for easy access
+   *
+   * @param testInfo - Playwright TestInfo object to attach the report
+   */
+  public async generateReport(testInfo: TestInfo) {
+    if (this.resultsList.length === 0) return;
+
+    // Combine all results into one HTML report
+    const htmlSections = this.resultsList.map(({ url, results }, idx) => {
+      const urlEndpoint = url.split('/').slice(-3).join('/');
+      const htmlReport = createHtmlReport({
+        results,
+        options: {
+          projectKey: `${urlEndpoint}`,
+          doNotCreateReportFile: true,
+        },
+      });
+      const reportFileName = (results.violations.length > 0 ? "FAILED " : "") + urlEndpoint;
+      return `
+      <details>
+        <summary><strong>Page ${idx + 1}: ${reportFileName}</strong></summary>
+        ${htmlReport}
+      </details>
+    `;
+    });
+
+    const consolidatedHtml = `
+        <html>
+          <head>
+          <title>Consolidated Accessibility Report</title>
+          <style>
+            details { margin-bottom: 1em; }
+            summary { cursor: pointer; font-size: 1.1em; }
+          </style>
+        </head>
+          <body>
+            <h1>Consolidated Accessibility Report</h1>
+            ${htmlSections.join('<hr/>')}
+          </body>
+        </html>
+      `;
+
+    await testInfo.attach('Consolidated Accessibility Report', {
+      body: consolidatedHtml,
+      contentType: 'text/html',
+    });
+
+    this.resultsList = []; // reset for next test
   }
 }
