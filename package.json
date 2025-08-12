@@ -1,7 +1,7 @@
 {
   "name": "@hmcts/playwright-common",
   "description": "Common library for Playwright tests",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "author": "HMCTS",
   "license": "MIT",
   "repository": {
