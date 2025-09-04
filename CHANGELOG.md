@@ -3,6 +3,10 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.35]
+
+- Updated get secrets script to allow for an array of keyvault names to be specified.
+
 ## [1.0.34]
 
 - Added: generateReport method in AxeUtils to create a consolidated HTML accessibility report across multiple pages.
