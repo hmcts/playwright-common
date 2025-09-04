@@ -65,19 +65,29 @@ function updateEnvFile(secretsMap, exampleEnvFilePath, envFilePath) {
 /**
  * Populates the .env file with secrets from Azure key vault. Maintains the structure of the .env.example file.
  *
- * @param keyVaultName {@link string} - The name of the Azure Key Vault to fetch secrets from
+ * @param {string|string[]} keyVaultNames - One or more Azure Key Vault names to fetch secrets from
  * @param exampleEnvFilePath {@link string} - Path to the example .env file (optional, default is .env.example)
  * @param envFilePath {@link string} - Path to the .env file (optional, default is .env)
- *
  */
 export function populateSecrets(
-  keyVaultName,
+  keyVaultNames,
   exampleEnvFilePath = DEFAULT_EXAMPLE_ENV_FILE,
   envFilePath = DEFAULT_ENV_FILE
 ) {
   try {
-    const secrets = getTaggedSecrets(keyVaultName);
-    updateEnvFile(secrets, exampleEnvFilePath, envFilePath);
+    const vaults = Array.isArray(keyVaultNames)
+      ? keyVaultNames
+      : [keyVaultNames];
+
+    const allSecrets = {};
+    for (const vault of vaults) {
+      const secrets = getTaggedSecrets(vault);
+      for (const [key, value] of Object.entries(secrets)) {
+        allSecrets[key] = value;
+      }
+    }
+
+    updateEnvFile(allSecrets, exampleEnvFilePath, envFilePath);
   } catch (err) {
     console.error("Error:", err.message);
     process.exit(1);
