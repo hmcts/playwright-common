@@ -46,7 +46,7 @@
     "lint": "yarn eslint ."
   },
   "bin": {
-    "delete-nightly-branch": "./bin/delete-nightly-branch.js"
+    "delete-nightly-dev-branch": "./dist/scripts/delete-nightly-dev-branch.js"
   },
   "packageManager": "yarn@4.9.4"
 }
