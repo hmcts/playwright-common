@@ -46,7 +46,8 @@
     "lint": "yarn eslint ."
   },
   "bin": {
-    "delete-nightly-dev-branch": "./dist/scripts/delete-nightly-dev-branch.js"
+    "delete-nightly-dev-branch": "./dist/scripts/delete-nightly-dev-branch.js",
+    "get-secrets": "./dist/scripts/get-secrets.js"
   },
   "packageManager": "yarn@4.9.4"
 }

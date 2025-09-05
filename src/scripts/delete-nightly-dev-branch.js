@@ -17,8 +17,7 @@ const branch = "nightly-dev";
 const repo = process.argv[2];
 
 if (!repo) {
-    console.error("Usage: delete-branch <repo>");
-    process.exit(1);
+    showUsage();
 }
 
 const githubApiUrl = `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`;
@@ -67,6 +66,15 @@ async function main() {
     if (branchExists) {
         await deleteBranch();
     }
+}
+
+function showUsage() {
+  console.error(`
+Usage: delete-branch <repo>
+
+Example:
+    yarn delete-nightly-dev-branch prl-e2e-tests`);
+  process.exit(1);
 }
 
 main().catch((error) => console.error("Unexpected error:", error));
