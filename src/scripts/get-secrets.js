@@ -13,12 +13,14 @@ import path from "path";
 const DEFAULT_EXAMPLE_ENV_FILE = ".env.example";
 const DEFAULT_ENV_FILE = ".env";
 
+// Get args passed in from command
 const args = process.argv.slice(2);
 
 if (!args || !args[0]) {
   showUsage();
 }
 
+// Get key vault names from command args
 const keyVaultNames = args[0]?.split(",");
 
 if(keyVaultNames.length === 0 || keyVaultNames.some(name => name.trim() === "")) {

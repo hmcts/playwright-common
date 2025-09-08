@@ -14,6 +14,8 @@ if (!githubToken) {
 
 const owner = "hmcts";
 const branch = "nightly-dev";
+
+// Get repo arg from command
 const repo = process.argv[2];
 
 if (!repo) {
