@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.36]
 
 - Added delete nightly branch script which can be run via yarn cli command.
-- Updated get secrets script to be run directly via yarn cli command.
+- Updated get secrets script to be run directly via yarn cli command
+  - **THIS IS A BREAKING CHANGE** - teams using the previous method will need to replace it with this new command.
 
 ## [1.0.35]
 
