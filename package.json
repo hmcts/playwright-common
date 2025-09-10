@@ -1,7 +1,7 @@
 {
   "name": "@hmcts/playwright-common",
   "description": "Common library for Playwright tests",
-  "version": "1.0.35",
+  "version": "1.0.36",
   "author": "HMCTS",
   "license": "MIT",
   "repository": {
@@ -42,6 +42,10 @@
     "build": "rm -rf dist && yarn tsc -p tsconfig.json",
     "build:package": "yarn build && yarn pack",
     "lint": "yarn eslint ."
+  },
+  "bin": {
+    "delete-nightly-dev-branch": "./dist/scripts/delete-nightly-dev-branch.js",
+    "get-secrets": "./dist/scripts/get-secrets.js"
   },
   "packageManager": "yarn@4.9.4"
 }

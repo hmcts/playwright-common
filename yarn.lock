@@ -184,6 +184,9 @@ __metadata:
     typescript-eslint: "npm:^8.8.0"
   peerDependencies:
     "@playwright/test": ^1.53.0
+  bin:
+    delete-nightly-dev-branch: ./dist/scripts/delete-nightly-dev-branch.js
+    get-secrets: ./dist/scripts/get-secrets.js
   languageName: unknown
   linkType: soft
 

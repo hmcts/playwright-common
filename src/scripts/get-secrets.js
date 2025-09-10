@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { execSync } from "child_process";
 import * as fs from "fs";
 import path from "path";
@@ -10,6 +12,23 @@ import path from "path";
 // Configuration
 const DEFAULT_EXAMPLE_ENV_FILE = ".env.example";
 const DEFAULT_ENV_FILE = ".env";
+
+// Get args passed in from command
+const args = process.argv.slice(2);
+
+if (!args || !args[0]) {
+  showUsage();
+}
+
+// Get key vault names from command args
+const keyVaultNames = args[0]?.split(",");
+
+if(keyVaultNames.length === 0 || keyVaultNames.some(name => name.trim() === "")) {
+  showUsage();
+}
+
+const exampleEnvFilePath = args[1] || DEFAULT_EXAMPLE_ENV_FILE;
+const envFilePath = args[2] || DEFAULT_ENV_FILE;
 
 function getTaggedSecrets(keyVaultName) {
   const secretsMap = {};
@@ -64,15 +83,8 @@ function updateEnvFile(secretsMap, exampleEnvFilePath, envFilePath) {
 
 /**
  * Populates the .env file with secrets from Azure key vault. Maintains the structure of the .env.example file.
- *
- * @param {string|string[]} keyVaultNames - One or more Azure Key Vault names to fetch secrets from
- * @param exampleEnvFilePath {@link string} - Path to the example .env file (optional, default is .env.example)
- * @param envFilePath {@link string} - Path to the .env file (optional, default is .env)
  */
-export function populateSecrets(
-  keyVaultNames,
-  exampleEnvFilePath = DEFAULT_EXAMPLE_ENV_FILE,
-  envFilePath = DEFAULT_ENV_FILE
+function populateSecrets(
 ) {
   try {
     const vaults = Array.isArray(keyVaultNames)
@@ -93,3 +105,14 @@ export function populateSecrets(
     process.exit(1);
   }
 }
+
+function showUsage() {
+  console.error(`
+Usage: get-secrets <keyVault1, keyVault2, ..> [example env file path] [env file path]
+
+Example:
+    yarn get-secrets "keyVault1, keyVault2" .env.example .env`);
+  process.exit(1);
+}
+
+populateSecrets();
