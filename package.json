@@ -21,6 +21,7 @@
     "@axe-core/playwright": "^4.10.0",
     "@eslint/js": "^9.11.1",
     "@typescript-eslint/eslint-plugin": "^8.8.0",
+    "axe-core": "^4.10.0",
     "axe-html-reporter": "^2.2.11",
     "eslint": "^9.11.1",
     "eslint-plugin-playwright": "^2.0.0",
@@ -29,19 +30,26 @@
     "lighthouse": "^12.2.1",
     "playwright-lighthouse": "^4.0.0",
     "typescript": "^5.6.2",
-    "typescript-eslint": "^8.8.0"
+    "typescript-eslint": "^8.8.0",
+    "winston": "^3.13.0"
   },
   "peerDependencies": {
-    "@playwright/test": "^1.53.0"
+    "@playwright/test": "^1.56.1",
+    "playwright-core": "^1.56.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.53.0",
-    "@types/node": "^24.0.8"
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.0.8",
+    "@types/winston": "^2.4.4",
+    "@typescript-eslint/parser": "^8.8.0",
+    "playwright-core": "^1.56.1",
+    "vitest": "^1.6.0"
   },
   "scripts": {
     "build": "rm -rf dist && yarn tsc -p tsconfig.json",
     "build:package": "yarn build && yarn pack",
-    "lint": "yarn eslint ."
+    "lint": "yarn eslint .",
+    "test": "vitest run"
   },
   "bin": {
     "delete-nightly-dev-branch": "./dist/scripts/delete-nightly-dev-branch.js",
