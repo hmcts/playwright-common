@@ -302,8 +302,12 @@ export class ApiClient {
         "Cannot resolve relative path without a configured baseUrl."
       );
     }
+    const normalisedPath = path.replace(/^\//, "");
+    if (normalisedPath.length === 0) {
+      return this.baseUrl.replace(/\/+$/, "") || this.baseUrl;
+    }
     const separator = this.baseUrl.endsWith("/") ? "" : "/";
-    return `${this.baseUrl}${separator}${path.replace(/^\//, "")}`;
+    return `${this.baseUrl.replace(/\/+$/, "")}${separator}${normalisedPath}`;
   }
 
   private buildParams(
