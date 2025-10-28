@@ -22,14 +22,18 @@ export interface ServiceAuthUtilsOptions {
 
 export class ServiceAuthUtils {
   private readonly serviceAuthUrl: string;
+  private readonly serviceAuthSecret: string;
   private readonly logger: Logger;
   private readonly client: ApiClient;
 
   constructor(options?: ServiceAuthUtilsOptions) {
     this.serviceAuthUrl = process.env.S2S_URL ?? "";
+    this.serviceAuthSecret = process.env.S2S_SECRET ?? "";
 
-    if (!this.serviceAuthUrl) {
-      throw new Error("Missing required environment variables: S2S_URL");
+    if (!this.serviceAuthUrl || !this.serviceAuthSecret) {
+      throw new Error(
+        "Missing required environment variables: S2S_URL and/or S2S_SECRET"
+      );
     }
     this.logger =
       options?.logger ??
@@ -62,6 +66,10 @@ export class ServiceAuthUtils {
         headers: {
           "content-type": "application/json",
           accept: "*/*",
+          Authorization: buildBasicAuthHeader(
+            payload.microservice,
+            this.serviceAuthSecret
+          ),
         },
         responseType: "text",
       });
@@ -91,12 +99,14 @@ export class ServiceAuthUtils {
   ): Error {
     if (error instanceof ApiClientError) {
       const body = error.logEntry.response.body;
-      const serialisedBody =
-        typeof body === "string"
-          ? body
-          : body
-          ? JSON.stringify(body)
-          : "No response body";
+      let serialisedBody: string;
+      if (typeof body === "string") {
+        serialisedBody = body;
+      } else if (body) {
+        serialisedBody = JSON.stringify(body);
+      } else {
+        serialisedBody = "No response body";
+      }
 
       return new Error(
         `${message}: ${serialisedBody} (Status Code: ${error.status}). Ensure your VPN is connected or check your URL/SECRET.`
@@ -109,4 +119,13 @@ export class ServiceAuthUtils {
     }
     return new Error(`${message}: ${String(error)}`);
   }
+}
+
+function buildBasicAuthHeader(
+  microservice: string,
+  secret: string
+): string {
+  const raw = `${microservice}:${secret}`;
+  const encoded = Buffer.from(raw).toString("base64");
+  return `Basic ${encoded}`;
 }

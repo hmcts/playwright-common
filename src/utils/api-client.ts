@@ -3,11 +3,11 @@ import { randomUUID } from "crypto";
 import type { Logger } from "winston";
 import {
   buildRedactionState,
-  RedactPattern,
-  RedactionState,
-  sanitizeHeaders,
-  sanitizeUrl,
-  sanitizeValue,
+  sanitiseHeaders,
+  sanitiseUrl,
+  sanitiseValue,
+  type RedactPattern,
+  type RedactionState,
 } from "../logging/redaction.js";
 import { createLogger } from "../logging/logger.js";
 
@@ -205,21 +205,21 @@ export class ApiClient {
 
     const rawBody = await safeReadBody(response);
     const parsedBody = parseBody<T>(rawBody, options?.responseType);
-    const sanitizedRequestHeaders = sanitizeHeaders(
+    const sanitisedRequestHeaders = sanitiseHeaders(
       requestHeaders,
       this.redactionState
     );
-    const sanitizedResponseHeaders = sanitizeHeaders(
+    const sanitisedResponseHeaders = sanitiseHeaders(
       responseHeaders,
       this.redactionState
     );
-    const sanitizedRequestData = sanitizeValue(
+    const sanitisedRequestData = sanitiseValue(
       options?.data,
       this.redactionState
     );
-    const sanitizedForm = sanitizeValue(options?.form, this.redactionState);
-    const sanitizedQuery = sanitizeValue(options?.query, this.redactionState);
-    const sanitizedResponseBody = sanitizeValue(
+    const sanitisedForm = sanitiseValue(options?.form, this.redactionState);
+    const sanitisedQuery = sanitiseValue(options?.query, this.redactionState);
+    const sanitisedResponseBody = sanitiseValue(
       parsedBody,
       this.redactionState,
       "responseBody"
@@ -229,21 +229,21 @@ export class ApiClient {
       id: randomUUID(),
       name: this.name,
       method,
-      url: sanitizeUrl(url, this.redactionState),
+      url: sanitiseUrl(url, this.redactionState),
       status,
       ok,
       timestamp: new Date(startTime).toISOString(),
       durationMs,
       correlationId,
       request: {
-        headers: sanitizedRequestHeaders,
-        data: sanitizedRequestData,
-        form: sanitizedForm,
-        query: sanitizedQuery,
+        headers: sanitisedRequestHeaders,
+        data: sanitisedRequestData,
+        form: sanitisedForm,
+        query: sanitisedQuery,
       },
       response: {
-        headers: sanitizedResponseHeaders,
-        body: sanitizedResponseBody,
+        headers: sanitisedResponseHeaders,
+        body: sanitisedResponseBody,
       },
       rawRequest: this.captureRawBodies
         ? {

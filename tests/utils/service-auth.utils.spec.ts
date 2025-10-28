@@ -13,6 +13,7 @@ beforeEach(() => {
   process.env = { ...ORIGINAL_ENV };
   process.env.S2S_URL =
     "http://rpe-service-auth-provider-aat.service.core-compute-aat.internal/testing-support/lease";
+  process.env.S2S_SECRET = "dummy-secret";
 });
 
 afterEach(() => {
@@ -103,7 +104,15 @@ describe("ServiceAuthUtils", () => {
 
     const token = await utils.retrieveToken({ microservice: "prl-cos-api" });
     expect(token).toBe("token-value");
-    expect(mock.post).toHaveBeenCalledWith("", expect.any(Object));
+    expect(mock.post).toHaveBeenCalledWith(
+      "",
+      expect.objectContaining({
+        data: { microservice: "prl-cos-api" },
+        headers: expect.objectContaining({
+          Authorization: expect.stringMatching(/^Basic /),
+        }),
+      })
+    );
   });
 
   it("throws a helpful error when the request fails", async () => {

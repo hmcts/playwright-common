@@ -1,4 +1,4 @@
-import { URL } from "url";
+import { URL } from "node:url";
 
 export const REDACTED_VALUE = "[REDACTED]";
 const CIRCULAR_PLACEHOLDER = "[Circular]";
@@ -6,7 +6,7 @@ const NON_PLAIN_OBJECT_PLACEHOLDER = "[Object]";
 
 export type RedactPattern = string | RegExp;
 
-const TOKEN_TEXT_REGEX = /(Bearer\s+)([A-Za-z0-9\-._]+)/gi;
+const TOKEN_TEXT_REGEX = /(Bearer\s+)([A-Z0-9.-]+)/gi;
 const KEY_VALUE_SECRET_REGEX =
   /((?:token|secret|password|api[_-]?key)[^:=]*)([:=]\s*)(["']?)([^"'\s]+)/gi;
 
@@ -55,7 +55,7 @@ export function shouldRedactKey(
   return state.patterns.some((pattern) => pattern.test(key));
 }
 
-export function sanitizeValue<T>(
+export function sanitiseValue<T>(
   value: T,
   state: RedactionState,
   key?: string
@@ -120,33 +120,33 @@ export function sanitizeValue<T>(
   }
 }
 
-export function sanitizeRecord(
+export function sanitiseRecord(
   record: Record<string | symbol, unknown>,
   state: RedactionState
 ): Record<string | symbol, unknown> {
-  const sanitized: Record<string | symbol, unknown> = {};
+  const sanitised: Record<string | symbol, unknown> = {};
   for (const [key, value] of Object.entries(record)) {
-    sanitized[key] = sanitizeValue(value, state, key);
+    sanitised[key] = sanitiseValue(value, state, key);
   }
   for (const sym of Object.getOwnPropertySymbols(record)) {
-    sanitized[sym] = sanitizeValue(record[sym], state);
+    sanitised[sym] = sanitiseValue(record[sym], state);
   }
-  return sanitized;
+  return sanitised;
 }
 
-export function sanitizeHeaders(
+export function sanitiseHeaders(
   headers: Record<string, string> | undefined,
   state: RedactionState
 ): Record<string, string> | undefined {
   if (!headers) return headers;
   const entries: Record<string, string> = {};
   for (const [key, value] of Object.entries(headers)) {
-    entries[key] = sanitizeValue(value, state, key);
+    entries[key] = sanitiseValue(value, state, key);
   }
   return entries;
 }
 
-export function sanitizeUrl(url: string, state: RedactionState): string {
+export function sanitiseUrl(url: string, state: RedactionState): string {
   if (!state.enabled) return url;
   try {
     const parsed = new URL(url);
@@ -168,6 +168,12 @@ export function sanitizeUrl(url: string, state: RedactionState): string {
 
 export function redactString(value: string): string {
   return value
-    .replace(TOKEN_TEXT_REGEX, "$1" + REDACTED_VALUE)
-    .replace(KEY_VALUE_SECRET_REGEX, "$1$2$3" + REDACTED_VALUE);
+    .replaceAll(TOKEN_TEXT_REGEX, "$1" + REDACTED_VALUE)
+    .replaceAll(KEY_VALUE_SECRET_REGEX, "$1$2$3" + REDACTED_VALUE);
 }
+
+// Backwards compatibility aliases (American spelling)
+export const sanitizeValue = sanitiseValue;
+export const sanitizeRecord = sanitiseRecord;
+export const sanitizeHeaders = sanitiseHeaders;
+export const sanitizeUrl = sanitiseUrl;

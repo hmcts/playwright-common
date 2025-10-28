@@ -1,12 +1,12 @@
 import winston, { format as winstonFormat, transports as winstonTransports } from "winston";
 import type { Logger } from "winston";
 import {
-  buildRedactionState,
   REDACTED_VALUE,
-  RedactPattern,
-  RedactionState,
   SPLAT_SYMBOL,
-  sanitizeValue,
+  buildRedactionState,
+  sanitiseValue,
+  type RedactPattern,
+  type RedactionState,
 } from "./redaction.js";
 
 export type LogFormat = "json" | "pretty";
@@ -53,12 +53,12 @@ function applyRedactionFormat(state: RedactionState) {
 
     for (const key of Object.keys(info)) {
       if (key === "level") continue;
-      info[key] = sanitizeValue(info[key], state, key);
+      info[key] = sanitiseValue(info[key], state, key);
     }
 
     const splatValue = info[SPLAT_SYMBOL];
     if (splatValue !== undefined) {
-      info[SPLAT_SYMBOL] = sanitizeValue(splatValue, state);
+      info[SPLAT_SYMBOL] = sanitiseValue(splatValue, state);
     }
 
     return info;

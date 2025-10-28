@@ -19,8 +19,8 @@ TCoE Best Practices for setting up playwright in your service can be found in th
 
 Ensure you have the following installed on your machine:
 
-- Node.js (v18+)
-- Yarn
+- Node.js (v20.11.1 or later)
+- Yarn (Berry)
 
 ### Installation
 
@@ -30,7 +30,7 @@ Clone the repository and install the dependencies:
 git clone git@github.com:hmcts/playwright-common.git
 cd playwright-common
 yarn install
-yarn setup
+yarn build
 ```
 
 ### Mandatory Requirements
@@ -66,15 +66,18 @@ IDAM_TESTING_SUPPORT_URL=https://idam-testing-support-api.demo.platform.hmcts.ne
 #### ServiceAuthUtils Requirements
 To use the `ServiceAuthUtils` class, you must configure the following environment variables in your repository:
 
-- `S2S_URL`  
+- `S2S_URL`
+- `S2S_SECRET` (the client secret used when generating a lease token)
 
 **For AAT environment:**
 ```env
 S2S_URL = http://rpe-service-auth-provider-aat.service.core-compute-aat.internal/testing-support/lease 
+S2S_SECRET = <fetch from Azure Key Vault>
 ```
 **For DEMO environment:**
 ```env
 S2S_URL = http://rpe-service-auth-provider-demo.service.core-compute-demo.internal/testing-support/lease
+S2S_SECRET = <fetch from Azure Key Vault>
 ```
 
 ### Logging & API Client

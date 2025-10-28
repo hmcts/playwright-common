@@ -3,8 +3,8 @@ import {
   REDACTED_VALUE,
   buildRedactionState,
   redactString,
-  sanitizeUrl,
-  sanitizeValue,
+  sanitiseUrl,
+  sanitiseValue,
 } from "../../src/logging/redaction.js";
 
 describe("redaction utilities", () => {
@@ -19,7 +19,7 @@ describe("redaction utilities", () => {
       },
     };
 
-    const result = sanitizeValue(payload, state);
+    const result = sanitiseValue(payload, state);
 
     expect(result.token).toBe(REDACTED_VALUE);
     expect(result.nested.secret).toBe(REDACTED_VALUE);
@@ -35,12 +35,12 @@ describe("redaction utilities", () => {
   it("redacts sensitive query parameters in URLs", () => {
     const url =
       "https://example.com/path?token=secret-token&other=value&password=123";
-    const sanitized = sanitizeUrl(url, state);
-    expect(sanitized).toContain(`token=${encodeURIComponent(REDACTED_VALUE)}`);
-    expect(sanitized).toContain(
+    const sanitised = sanitiseUrl(url, state);
+    expect(sanitised).toContain(`token=${encodeURIComponent(REDACTED_VALUE)}`);
+    expect(sanitised).toContain(
       `password=${encodeURIComponent(REDACTED_VALUE)}`
     );
-    expect(sanitized).toContain("other=value");
+    expect(sanitised).toContain("other=value");
   });
 
   it("handles circular references without throwing", () => {
@@ -52,7 +52,7 @@ describe("redaction utilities", () => {
     };
     payload.self = payload;
 
-    const result = sanitizeValue(payload, state);
+    const result = sanitiseValue(payload, state);
 
     expect(result.password).toBe(REDACTED_VALUE);
     expect(result.nested).toEqual({ token: REDACTED_VALUE });
@@ -66,7 +66,7 @@ describe("redaction utilities", () => {
       secretKey: "should-hide",
     };
 
-    const result = sanitizeValue(payload, state);
+    const result = sanitiseValue(payload, state);
 
     expect(result.timestamp).toBe(now.toISOString());
     expect(result.secretKey).toBe(REDACTED_VALUE);
@@ -79,7 +79,7 @@ describe("redaction utilities", () => {
       "Bearer abc",
     ];
 
-    const result = sanitizeValue(payload, state);
+    const result = sanitiseValue(payload, state);
 
     expect(result[0]).toEqual({ token: REDACTED_VALUE });
     expect(result[1]).toEqual({ nested: [{ password: REDACTED_VALUE }] });
