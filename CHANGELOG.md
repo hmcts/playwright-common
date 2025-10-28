@@ -5,18 +5,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.37]
 
-### Added
-- Winston-based logger factory with structured metadata support for Playwright tests.
-- Shared API client helper with sanitised request/response logging and attachment tooling.
-- Vitest coverage for logging, redaction, IdAM, ServiceAuth, and API client utilities.
-- Entry points for the new logging utilities.
+- Added
+  - Winston-based logger factory with structured metadata support for Playwright tests.
+  - Shared API client helper with sanitised request/response logging and attachment tooling.
+  - Vitest coverage for logging, redaction, IdAM, ServiceAuth, and API client utilities.
+  - Entry points for the new logging utilities.
 
-### Changed
-- Hardened redaction logic to cope with circular structures, arrays, and nested secrets.
-- Migrated IdAM and ServiceAuth helpers to the shared telemetry/logging pipeline.
-- Documented logging usage and environment toggles; declared missing peer dependencies.
-- Bumped Playwright dependencies to v1.56.1.
-- Fixed minor spelling issues highlighted by linting.
+- Changed
+  - Hardened redaction logic to cope with circular structures, arrays, and nested secrets.
+  - Migrated IdAM and ServiceAuth helpers to the shared telemetry/logging pipeline.
+  - Documented logging usage and environment toggles; declared missing peer dependencies.
+  - Bumped Playwright dependencies to v1.56.1.
+  - Fixed minor spelling issues highlighted by linting.
 
 ## [1.0.36]
 
