@@ -18,14 +18,22 @@ describe('WaitUtils', () => {
     const locator = new MockLocator([true, true]);
     const wait = new WaitUtils();
     const start = Date.now();
-    await wait.waitForLocatorVisibility(locator as any, { visibility: true, delay: 10, timeout: 200 });
+    await wait.waitForLocatorVisibility(locator, {
+      visibility: true,
+      delay: 10,
+      timeout: 200,
+    });
     expect(Date.now() - start).toBeLessThan(50);
   });
 
   it('waits until visibility becomes true', async () => {
     const locator = new MockLocator([false, false, true]);
     const wait = new WaitUtils();
-    await wait.waitForLocatorVisibility(locator as any, { visibility: true, delay: 5, timeout: 200 });
+    await wait.waitForLocatorVisibility(locator, {
+      visibility: true,
+      delay: 5,
+      timeout: 200,
+    });
     // If it completed without throwing it's successful
     expect(true).toBe(true);
   });
@@ -34,7 +42,11 @@ describe('WaitUtils', () => {
     const locator = new MockLocator([false, false, false, false]);
     const wait = new WaitUtils();
     await expect(
-      wait.waitForLocatorVisibility(locator as any, { visibility: true, delay: 10, timeout: 30 })
+      wait.waitForLocatorVisibility(locator, {
+        visibility: true,
+        delay: 10,
+        timeout: 30,
+      })
     ).rejects.toThrow(/Timeout/);
   });
 });

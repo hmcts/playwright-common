@@ -18,7 +18,7 @@ export { SessionUtils } from "./utils/session.utils.js";
 export { TableUtils } from "./utils/table.utils.js";
 export { ValidatorUtils } from "./utils/validator.utils.js";
 export { WaitUtils } from "./utils/wait.utils.js";
-export { ServiceAuthUtils } from "./utils/service-auth.utils.js"
+export { ServiceAuthUtils } from "./utils/service-auth.utils.js";
 export {
   createLogger,
   createChildLogger,

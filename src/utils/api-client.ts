@@ -113,7 +113,7 @@ export class ApiClient {
 
   constructor(options?: ApiClientOptions) {
     this.baseUrl = options?.baseUrl;
-    this.defaultHeaders = { ...options?.defaultHeaders };
+    this.defaultHeaders = { ...(options?.defaultHeaders ?? {}) };
     this.requestFactory =
       options?.requestFactory ?? (() => request.newContext());
     this.name = options?.name ?? "api-client";

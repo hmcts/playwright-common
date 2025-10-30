@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Documented logging usage and environment toggles; declared missing peer dependencies.
   - Bumped Playwright dependencies to v1.56.1.
   - Fixed minor spelling issues highlighted by linting.
+  - Hardened shared wait, validator, browser, session, table and accessibility helpers to improve resiliency, trim logging noise and remove unsafe casts.
+  - Tightened service and IDAM client behaviour (token parsing, OAuth payload construction, logger propagation) plus readonly configuration exports.
+  - Improved CLI scripts (`delete-nightly-dev-branch`, `get-secrets`) with stronger validation and clearer error handling.
 
 ## [1.0.36]
 

@@ -14,7 +14,7 @@ export class ExuiMediaViewerPage {
     fullPage: { x: -1000, y: 0, width: 1920, height: 1080 },
   };
 
-  public async waitForLoad() {
+  public async waitForLoad(): Promise<void> {
     await expect
       .poll(
         async () => {
@@ -29,17 +29,19 @@ export class ExuiMediaViewerPage {
   public async getNumberOfPages(): Promise<number> {
     const text = await this.toolbar.numPages.textContent();
     if (!text) throw new Error("No page numbers found");
-    return parseInt(text.replace("/", ""));
+    return Number.parseInt(text.replace("/", ""), 10);
   }
 
-  public async runVisualTestOnAllPages() {
+  public async runVisualTestOnAllPages(): Promise<void> {
     await this.waitForLoad();
     const totalPages = await this.getNumberOfPages();
     for (let i = 0; i < totalPages; i++) {
       await expect(this.page).toHaveScreenshot({
         clip: this.clippingCoords.fullPage,
       });
-      if (i != totalPages - 1) await this.toolbar.pageDownBtn.click();
+      if (i !== totalPages - 1) {
+        await this.toolbar.pageDownBtn.click();
+      }
     }
   }
 }

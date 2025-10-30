@@ -51,6 +51,7 @@ export class ServiceAuthUtils {
         correlationId: options?.correlationId,
         redaction: options?.apiClientOptions?.redaction,
         captureRawBodies: options?.apiClientOptions?.captureRawBodies,
+        onResponse: options?.apiClientOptions?.onResponse,
       });
   }
   /**
@@ -67,7 +68,7 @@ export class ServiceAuthUtils {
         headers: {
           "content-type": "application/json",
           accept: "*/*",
-          Authorization: buildBasicAuthHeader(
+          Authorization: ServiceAuthUtils.buildBasicAuthHeader(
             payload.microservice,
             this.serviceAuthSecret
           ),
@@ -79,7 +80,12 @@ export class ServiceAuthUtils {
         throw new Error("Service-to-service token response was empty.");
       }
 
-      return response.data;
+      const token = response.data.trim();
+      if (!token) {
+        throw new Error("Service-to-service token response was blank.");
+      }
+
+      return token;
     } catch (error) {
       throw this.handleApiError(
         error,
@@ -112,13 +118,13 @@ export class ServiceAuthUtils {
     }
     return new Error(`${message}: ${String(error)}`);
   }
-}
 
-function buildBasicAuthHeader(
-  microservice: string,
-  secret: string
-): string {
-  const raw = `${microservice}:${secret}`;
-  const encoded = Buffer.from(raw).toString("base64");
-  return `Basic ${encoded}`;
+  private static buildBasicAuthHeader(
+    microservice: string,
+    secret: string
+  ): string {
+    const raw = `${microservice}:${secret}`;
+    const encoded = Buffer.from(raw).toString("base64");
+    return `Basic ${encoded}`;
+  }
 }

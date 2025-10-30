@@ -2,9 +2,9 @@ import playwright from "eslint-plugin-playwright";
 import tseslint from "typescript-eslint";
 
 export class LintingConfig {
-  public static tseslintRecommended = tseslint.configs.recommended;
+  public static readonly tseslintRecommended = tseslint.configs.recommended;
 
-  public static ignored = {
+  public static readonly ignored = {
     ignores: [
       ".yarn/**",
       "eslint.config.mjs",
@@ -14,7 +14,7 @@ export class LintingConfig {
     ],
   };
 
-  public static tseslintPlugin = {
+  public static readonly tseslintPlugin = {
     files: ["**/*.ts"],
     plugins: {
       "@typescript-eslint": tseslint.plugin,
@@ -30,7 +30,7 @@ export class LintingConfig {
     },
   };
 
-  public static playwright = {
+  public static readonly playwright = {
     ...playwright.configs["flat/recommended"],
     rules: {
       ...playwright.configs["flat/recommended"].rules,

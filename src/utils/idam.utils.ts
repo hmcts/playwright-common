@@ -249,7 +249,6 @@ export class IdamUtils {
   public async getUserInfo(
     payload: GetUserInfoParams
   ): Promise<UserInfoParams> {
-    let url: string;
     if ((payload.email && payload.id) || (!payload.email && !payload.id)) {
       throw new Error(
         "You must provide either an email or an id, but not both."
@@ -263,10 +262,9 @@ export class IdamUtils {
     };
     try {
       if (payload.email) {
-        url = "/test/idam/users";
         const response = await this.testingSupportClient.get<
           UserInfoParams | UserInfoParams[]
-        >(url, {
+        >("/test/idam/users", {
           ...requestOptions,
           query: {
             email: payload.email,
@@ -284,9 +282,8 @@ export class IdamUtils {
         return userData;
       }
 
-      url = `/test/idam/users/${payload.id}`;
       const response = await this.testingSupportClient.get<UserInfoParams>(
-        url,
+        `/test/idam/users/${payload.id}`,
         requestOptions
       );
 
@@ -371,7 +368,10 @@ export class IdamUtils {
       );
     }
 
-  this.logger.error(message, { operation, error: error instanceof Error ? error.message : String(error) });
+    this.logger.error(message, {
+      operation,
+      error: error instanceof Error ? error.message : String(error),
+    });
     if (error instanceof Error) {
       return new Error(`${message}: ${error.message}`);
     }
@@ -389,13 +389,20 @@ function buildTokenForm({
   password,
   redirectUri,
 }: IdamTokenParams): Record<string, string> {
-  return {
+  const form: Record<string, string> = {
     grant_type: grantType,
     client_id: clientId,
     client_secret: clientSecret,
     scope,
-    username: username ?? "",
-    password: password ?? "",
-    redirectUri: redirectUri ?? "",
   };
+  if (username) {
+    form.username = username;
+  }
+  if (password) {
+    form.password = password;
+  }
+  if (redirectUri) {
+    form.redirect_uri = redirectUri;
+  }
+  return form;
 }

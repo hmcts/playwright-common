@@ -1,7 +1,8 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { Page, expect, TestInfo } from "@playwright/test";
 import { createHtmlReport } from "axe-html-reporter";
-import { createLogger, createChildLogger } from "../logging/logger.js";
+import type { Logger } from "winston";
+import { createChildLogger, createLogger } from "../logging/logger.js";
 
 interface AuditOptions {
   exclude?: string | string[];
@@ -14,8 +15,11 @@ interface AxeAuditResult {
   results: Awaited<ReturnType<AxeBuilder["analyze"]>>;
 }
 
+const normaliseArray = <T>(value?: T | T[]): T[] =>
+  value === undefined ? [] : Array.isArray(value) ? value : [value];
+
 export class AxeUtils {
-  private readonly DEFAULT_TAGS = [
+  private static readonly DEFAULT_TAGS = [
     "wcag2a",
     "wcag2aa",
     "wcag21a",
@@ -26,18 +30,23 @@ export class AxeUtils {
 
   private resultsList: AxeAuditResult[] = [];
 
-  private readonly logger = createChildLogger(createLogger(), { component: "axe" });
+  private static readonly BASE_LOGGER: Logger = createChildLogger(
+    createLogger(),
+    { component: "axe" }
+  );
 
-  constructor(protected readonly page: Page) {}
+  private readonly logger: Logger;
+
+  constructor(protected readonly page: Page) {
+    this.logger = AxeUtils.BASE_LOGGER;
+  }
 
   private applySelectors(
     builder: AxeBuilder,
     method: "exclude" | "include",
     selectors?: string | string[]
-  ) {
-    if (!selectors) return;
-    const selectorsArray = Array.isArray(selectors) ? selectors : [selectors];
-    for (const selector of selectorsArray) {
+  ): void {
+    for (const selector of normaliseArray(selectors)) {
       builder[method](selector);
     }
   }
@@ -48,18 +57,26 @@ export class AxeUtils {
    * @param options {@link AuditOptions} - Optional config such as excluding element(s)
    *
    */
-  public async audit(options?: AuditOptions) {
+  public async audit(options?: AuditOptions): Promise<void> {
     const start = Date.now();
-    const builder = new AxeBuilder({ page: this.page }).withTags(this.DEFAULT_TAGS);
+    const builder = new AxeBuilder({ page: this.page }).withTags(
+      AxeUtils.DEFAULT_TAGS
+    );
     this.applySelectors(builder, "exclude", options?.exclude);
     this.applySelectors(builder, "include", options?.include);
 
-    if (options?.disableRules) builder.disableRules(options.disableRules);
+    const disableRules = normaliseArray(options?.disableRules);
+    if (disableRules.length > 0) {
+      builder.disableRules(disableRules);
+    }
     const results = await builder.analyze();
     this.resultsList.push({ url: this.page.url(), results });
 
     const durationMs = Date.now() - start;
-    if (process.env.PWDEBUG) {
+    const isDebugLoggingEnabled =
+      process.env.PWDEBUG === "1" ||
+      process.env.PWDEBUG?.toLowerCase() === "true";
+    if (isDebugLoggingEnabled) {
       this.logger.info("Accessibility audit completed", {
         url: this.page.url(),
         durationMs,
@@ -90,24 +107,31 @@ export class AxeUtils {
    * @param testInfo - Playwright TestInfo object to attach the report
    * @param reportName - Optional name for the report file
    */
-  public async generateReport(testInfo: TestInfo, reportName?: string) {
-    if (this.resultsList.length === 0) return;
+  public async generateReport(
+    testInfo: TestInfo,
+    reportName?: string
+  ): Promise<void> {
+    if (this.resultsList.length === 0) {
+      return;
+    }
 
     // Combine all results into one HTML report
     const htmlSections = this.resultsList.map(({ url, results }, idx) => {
-      const urlEndpoint = url.split('/').slice(-3).join('/');
+      const urlEndpoint = url.split("/").slice(-3).join("/");
       const unique = `_${idx}`;
-      let htmlReport = createHtmlReport({
-        results,
-        options: {
-          projectKey: `${urlEndpoint}`,
-          doNotCreateReportFile: true,
-        },
-      });
+      const htmlReport = this.getUpdatedHtmlReport(
+        createHtmlReport({
+          results,
+          options: {
+            projectKey: `${urlEndpoint}`,
+            doNotCreateReportFile: true,
+          },
+        }),
+        unique
+      );
 
-      htmlReport = this.getUpdatedHtmlReport(htmlReport, unique);
-
-      const reportFileName = (results.violations.length > 0 ? "FAILED " : "") + urlEndpoint;
+      const reportFileName =
+        (results.violations.length > 0 ? "FAILED " : "") + urlEndpoint;
       return `
       <details>
         <summary><strong>Page ${idx + 1}: ${reportFileName}</strong></summary>
@@ -128,27 +152,28 @@ export class AxeUtils {
         </head>
           <body>
             <h1>Consolidated Accessibility Report</h1>
-            ${htmlSections.join('<hr/>')}
+            ${htmlSections.join("<hr/>")}
           </body>
         </html>
       `;
 
-    await testInfo.attach(reportName ?? 'Consolidated Accessibility Report', {
+    await testInfo.attach(reportName ?? "Consolidated Accessibility Report", {
       body: consolidatedHtml,
-      contentType: 'text/html',
+      contentType: "text/html",
     });
     const reportDurationMs = Date.now() - reportStart;
     this.logger.info("Accessibility consolidated report attached", {
       pages: this.resultsList.length,
-      pagesWithViolations: this.resultsList.filter(r => r.results.violations.length > 0).length,
+      pagesWithViolations: this.resultsList.filter(
+        (result) => result.results.violations.length > 0
+      ).length,
       generationDurationMs: reportDurationMs,
-      reportName: reportName ?? 'Consolidated Accessibility Report'
+      reportName: reportName ?? "Consolidated Accessibility Report",
     });
     this.resultsList = []; // reset for next test
   }
 
-  private getUpdatedHtmlReport(htmlReport: string, unique: string) {
-    // eslint-disable-next-line prefer-string-replace-all -- multi-chain readability acceptable here
+  private getUpdatedHtmlReport(htmlReport: string, unique: string): string {
     return htmlReport
       .replaceAll('id="accordionPasses"', `id="accordionPasses${unique}"`)
       .replaceAll('id="headingOne"', `id="headingOne${unique}"`)
