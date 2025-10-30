@@ -287,9 +287,7 @@ export class ApiClient {
   }
 
   private async getContext(): Promise<APIRequestContext> {
-    if (!this.contextPromise) {
-      this.contextPromise = this.requestFactory();
-    }
+    this.contextPromise ??= this.requestFactory();
     return this.contextPromise;
   }
 
@@ -333,21 +331,20 @@ async function safeReadBody(response: APIResponse): Promise<string | undefined> 
 
 function parseBody<T>(
   rawBody: string | undefined,
-  responseType: ApiRequestOptions["responseType"]
+  responseType: ApiRequestOptions["responseType"] = "auto"
 ): T {
   if (rawBody === undefined || rawBody === "") {
     return undefined as T;
   }
 
-  const desiredType = responseType ?? "auto";
-  if (desiredType === "text") {
+  if (responseType === "text") {
     return rawBody as unknown as T;
   }
 
   try {
     return JSON.parse(rawBody) as T;
   } catch {
-    if (desiredType === "json") {
+    if (responseType === "json") {
       throw new Error("Failed to parse response body as JSON.");
     }
     return rawBody as unknown as T;
