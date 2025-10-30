@@ -1,6 +1,7 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { Page, expect, TestInfo } from "@playwright/test";
 import { createHtmlReport } from "axe-html-reporter";
+import { createLogger, createChildLogger } from "../logging/logger.js";
 
 interface AuditOptions {
   exclude?: string | string[];
@@ -25,6 +26,8 @@ export class AxeUtils {
 
   private resultsList: AxeAuditResult[] = [];
 
+  private readonly logger = createChildLogger(createLogger(), { component: "axe" });
+
   constructor(protected readonly page: Page) {}
 
   private applySelectors(
@@ -33,9 +36,10 @@ export class AxeUtils {
     selectors?: string | string[]
   ) {
     if (!selectors) return;
-    (Array.isArray(selectors) ? selectors : [selectors]).forEach((selector) =>
-      builder[method](selector)
-    );
+    const selectorsArray = Array.isArray(selectors) ? selectors : [selectors];
+    for (const selector of selectorsArray) {
+      builder[method](selector);
+    }
   }
 
   /**
@@ -45,9 +49,8 @@ export class AxeUtils {
    *
    */
   public async audit(options?: AuditOptions) {
-    const builder = new AxeBuilder({ page: this.page }).withTags(
-      this.DEFAULT_TAGS
-    );
+    const start = Date.now();
+    const builder = new AxeBuilder({ page: this.page }).withTags(this.DEFAULT_TAGS);
     this.applySelectors(builder, "exclude", options?.exclude);
     this.applySelectors(builder, "include", options?.include);
 
@@ -55,16 +58,24 @@ export class AxeUtils {
     const results = await builder.analyze();
     this.resultsList.push({ url: this.page.url(), results });
 
+    const durationMs = Date.now() - start;
     if (process.env.PWDEBUG) {
+      this.logger.info("Accessibility audit completed", {
+        url: this.page.url(),
+        durationMs,
+        violationCount: results.violations.length,
+      });
       if (results.violations.length > 0) {
-        console.log(`Accessibility issues found on ${this.page.url()}:`);
-        results.violations.forEach((violation) => {
-          console.log(`${violation.id}: ${violation.description}`);
-          console.log(`Impact: ${violation.impact}`);
-          console.log(
-            `Affected nodes:`,
-            violation.nodes.map((node) => node.html).join("\n")
-          );
+        this.logger.warn("Accessibility issues detected", {
+          url: this.page.url(),
+          durationMs,
+          violationCount: results.violations.length,
+          violations: results.violations.map((v) => ({
+            id: v.id,
+            impact: v.impact,
+            description: v.description,
+            nodes: v.nodes.map((n) => n.html),
+          })),
         });
       }
     }
@@ -105,6 +116,7 @@ export class AxeUtils {
     `;
     });
 
+    const reportStart = Date.now();
     const consolidatedHtml = `
         <html>
           <head>
@@ -125,39 +137,46 @@ export class AxeUtils {
       body: consolidatedHtml,
       contentType: 'text/html',
     });
-
+    const reportDurationMs = Date.now() - reportStart;
+    this.logger.info("Accessibility consolidated report attached", {
+      pages: this.resultsList.length,
+      pagesWithViolations: this.resultsList.filter(r => r.results.violations.length > 0).length,
+      generationDurationMs: reportDurationMs,
+      reportName: reportName ?? 'Consolidated Accessibility Report'
+    });
     this.resultsList = []; // reset for next test
   }
 
   private getUpdatedHtmlReport(htmlReport: string, unique: string) {
+    // eslint-disable-next-line prefer-string-replace-all -- multi-chain readability acceptable here
     return htmlReport
-      .replace(/id="accordionPasses"/g, `id="accordionPasses${unique}"`)
-      .replace(/id="headingOne"/g, `id="headingOne${unique}"`)
-      .replace(/data-target="#passes"/g, `data-target="#passes${unique}"`)
-      .replace(/aria-controls="passes"/g, `aria-controls="passes${unique}"`)
-      .replace(/id="passes"/g, `id="passes${unique}"`)
-      .replace(/aria-labelledby="headingOne"/g, `aria-labelledby="headingOne${unique}"`)
-      .replace(/id="accordionIncomplete"/g, `id="accordionIncomplete${unique}"`)
-      .replace(/id="headingTwo"/g, `id="headingTwo${unique}"`)
-      .replace(/data-target="#incomplete"/g, `data-target="#incomplete${unique}"`)
-      .replace(/aria-controls="incomplete"/g, `aria-controls="incomplete${unique}"`)
-      .replace(/id="incomplete"/g, `id="incomplete${unique}"`)
-      .replace(/aria-labelledby="headingTwo"/g, `aria-labelledby="headingTwo${unique}"`)
-      .replace(/id="accordionInapplicable"/g, `id="accordionInapplicable${unique}"`)
-      .replace(/id="headingThree"/g, `id="headingThree${unique}"`)
-      .replace(/data-target="#inapplicable"/g, `data-target="#inapplicable${unique}"`)
-      .replace(/aria-controls="inapplicable"/g, `aria-controls="inapplicable${unique}"`)
-      .replace(/id="inapplicable"/g, `id="inapplicable${unique}"`)
-      .replace(/aria-labelledby="headingThree"/g, `aria-labelledby="headingThree${unique}"`)
-      .replace(/id="rulesSection"/g, `id="rulesSection${unique}"`)
-      .replace(/id="ruleSection"/g, `id="ruleSection${unique}"`)
-      .replace(/data-target="#rules"/g, `data-target="#rules${unique}"`)
-      .replace(/aria-controls="rules"/g, `aria-controls="rules${unique}"`)
-      .replace(/id="rules"/g, `id="rules${unique}"`)
-      .replace(/aria-labelledby="ruleSection"/g, `aria-labelledby="ruleSection${unique}"`)
-      .replace(/data-parent="#accordionPasses"/g, `data-parent="#accordionPasses${unique}"`)
-      .replace(/data-parent="#accordionIncomplete"/g, `data-parent="#accordionIncomplete${unique}"`)
-      .replace(/data-parent="#accordionInapplicable"/g, `data-parent="#accordionInapplicable${unique}"`)
-      .replace(/data-parent="#rules"/g, `data-parent="#rules${unique}"`);
+      .replaceAll('id="accordionPasses"', `id="accordionPasses${unique}"`)
+      .replaceAll('id="headingOne"', `id="headingOne${unique}"`)
+      .replaceAll('data-target="#passes"', `data-target="#passes${unique}"`)
+      .replaceAll('aria-controls="#passes"', `aria-controls="#passes${unique}"`)
+      .replaceAll('id="passes"', `id="passes${unique}"`)
+      .replaceAll('aria-labelledby="headingOne"', `aria-labelledby="headingOne${unique}"`)
+      .replaceAll('id="accordionIncomplete"', `id="accordionIncomplete${unique}"`)
+      .replaceAll('id="headingTwo"', `id="headingTwo${unique}"`)
+      .replaceAll('data-target="#incomplete"', `data-target="#incomplete${unique}"`)
+      .replaceAll('aria-controls="#incomplete"', `aria-controls="#incomplete${unique}"`)
+      .replaceAll('id="incomplete"', `id="incomplete${unique}"`)
+      .replaceAll('aria-labelledby="headingTwo"', `aria-labelledby="headingTwo${unique}"`)
+      .replaceAll('id="accordionInapplicable"', `id="accordionInapplicable${unique}"`)
+      .replaceAll('id="headingThree"', `id="headingThree${unique}"`)
+      .replaceAll('data-target="#inapplicable"', `data-target="#inapplicable${unique}"`)
+      .replaceAll('aria-controls="#inapplicable"', `aria-controls="#inapplicable${unique}"`)
+      .replaceAll('id="inapplicable"', `id="inapplicable${unique}"`)
+      .replaceAll('aria-labelledby="headingThree"', `aria-labelledby="headingThree${unique}"`)
+      .replaceAll('id="rulesSection"', `id="rulesSection${unique}"`)
+      .replaceAll('id="ruleSection"', `id="ruleSection${unique}"`)
+      .replaceAll('data-target="#rules"', `data-target="#rules${unique}"`)
+      .replaceAll('aria-controls="#rules"', `aria-controls="#rules${unique}"`)
+      .replaceAll('id="rules"', `id="rules${unique}"`)
+      .replaceAll('aria-labelledby="ruleSection"', `aria-labelledby="ruleSection${unique}"`)
+      .replaceAll('data-parent="#accordionPasses"', `data-parent="#accordionPasses${unique}"`)
+      .replaceAll('data-parent="#accordionIncomplete"', `data-parent="#accordionIncomplete${unique}"`)
+      .replaceAll('data-parent="#accordionInapplicable"', `data-parent="#accordionInapplicable${unique}"`)
+      .replaceAll('data-parent="#rules"', `data-parent="#rules${unique}"`);
   }
 }

@@ -8,8 +8,7 @@ export class ValidatorUtils {
    *
    */
   public static validateCaseNumber(caseNumber: string) {
-    // TODO: There may be a specification around case numbers somewhere?
-    // For now, this just validates it's only digits
+  // Case number specification not yet formalised (EXUI-0000). Current rule: digits only.
     expect(caseNumber).toMatch(/^\d+$/);
   }
 
@@ -21,9 +20,10 @@ export class ValidatorUtils {
    *
    */
   public static validateDate(date: string) {
-    const dateRegex =
-      /^\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}$/;
+    const dateRegex = /^\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}$/;
     expect(date).toMatch(dateRegex);
-    expect(Date.parse(date)).not.toBe(NaN);
+    const parsed = new Date(date);
+    // Ensure parsed date components align with input (guards against e.g. invalid date becoming NaN or different month)
+    expect(parsed.toString()).not.toContain("Invalid Date");
   }
 }

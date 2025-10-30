@@ -1,5 +1,5 @@
 import { APIRequestContext, APIResponse, request } from "@playwright/test";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import type { Logger } from "winston";
 import {
   buildRedactionState,
@@ -33,11 +33,13 @@ export interface ApiClientOptions {
   onResponse?: (entry: ApiLogEntry) => void;
 }
 
+type QueryParamValue = string | number | boolean | undefined;
+
 export interface ApiRequestOptions<TBody = unknown> {
   headers?: Record<string, string>;
   data?: TBody;
   form?: Record<string, string>;
-  query?: Record<string, string | number | boolean | undefined>;
+  query?: Record<string, QueryParamValue>;
   timeoutMs?: number;
   throwOnError?: boolean;
   responseType?: "auto" | "json" | "text";
@@ -67,7 +69,7 @@ export interface ApiLogEntry {
     headers?: Record<string, string>;
     data?: unknown;
     form?: Record<string, string>;
-    query?: Record<string, string | number | boolean | undefined>;
+    query?: Record<string, QueryParamValue>;
   };
   response: {
     headers?: Record<string, string>;
@@ -93,6 +95,10 @@ export class ApiClientError extends Error {
   }
 }
 
+/**
+ * Lightweight HTTP client wrapper around Playwright's APIRequestContext.
+ * Provides redacted structured logging, correlation IDs and optional raw body capture.
+ */
 export class ApiClient {
   private readonly baseUrl?: string;
   private readonly defaultHeaders: Record<string, string>;
@@ -138,6 +144,7 @@ export class ApiClient {
     }
   }
 
+  /** Perform a GET request */
   public async get<T = unknown>(
     path: string,
     options?: ApiRequestOptions
@@ -145,6 +152,7 @@ export class ApiClient {
     return this.performRequest<T>("GET", path, options);
   }
 
+  /** Perform a POST request */
   public async post<T = unknown, TBody = unknown>(
     path: string,
     options?: ApiRequestOptions<TBody>
@@ -152,6 +160,7 @@ export class ApiClient {
     return this.performRequest<T>("POST", path, options);
   }
 
+  /** Perform a PUT request */
   public async put<T = unknown, TBody = unknown>(
     path: string,
     options?: ApiRequestOptions<TBody>
@@ -159,6 +168,7 @@ export class ApiClient {
     return this.performRequest<T>("PUT", path, options);
   }
 
+  /** Perform a PATCH request */
   public async patch<T = unknown, TBody = unknown>(
     path: string,
     options?: ApiRequestOptions<TBody>
@@ -166,6 +176,7 @@ export class ApiClient {
     return this.performRequest<T>("PATCH", path, options);
   }
 
+  /** Perform a DELETE request */
   public async delete<T = unknown>(
     path: string,
     options?: ApiRequestOptions
@@ -173,6 +184,7 @@ export class ApiClient {
     return this.performRequest<T>("DELETE", path, options);
   }
 
+  /** Core request performer handling logging, redaction and error conversion */
   private async performRequest<T>(
     method: HttpMethod,
     path: string,
@@ -286,11 +298,13 @@ export class ApiClient {
     };
   }
 
+  /** Lazily build and cache the Playwright request context */
   private async getContext(): Promise<APIRequestContext> {
     this.contextPromise ??= this.requestFactory();
     return this.contextPromise;
   }
 
+  /** Build an absolute URL from a relative path using the configured baseUrl */
   private buildUrl(path: string): string {
     if (/^https?:\/\//i.test(path)) {
       return path;
@@ -308,8 +322,9 @@ export class ApiClient {
     return `${this.baseUrl.replace(/\/+$/, "")}${separator}${normalisedPath}`;
   }
 
+  /** Normalise query params object into string map for playwright */
   private buildParams(
-    query?: Record<string, string | number | boolean | undefined>
+    query?: Record<string, QueryParamValue>
   ): Record<string, string> | undefined {
     if (!query) return undefined;
     const params: Record<string, string> = {};

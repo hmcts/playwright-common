@@ -6,6 +6,7 @@ import {
   type ApiRequestOptions,
 } from "./api-client.js";
 import { createChildLogger, createLogger } from "../logging/logger.js";
+import { serialiseApiBody } from "./error.utils.js";
 
 interface UserBase {
   email: string;
@@ -363,20 +364,14 @@ export class IdamUtils {
     operation: string
   ): Error {
     if (error instanceof ApiClientError) {
-      const body = error.logEntry.response.body;
-      const serialisedBody =
-        typeof body === "string"
-          ? body
-          : body
-          ? JSON.stringify(body)
-          : "No response body";
+      const serialisedBody = serialiseApiBody(error.logEntry.response.body);
 
       return new Error(
         `${message}: ${serialisedBody} (Status Code: ${error.status})`
       );
     }
 
-    this.logger.error(message, { operation, error });
+  this.logger.error(message, { operation, error: error instanceof Error ? error.message : String(error) });
     if (error instanceof Error) {
       return new Error(`${message}: ${error.message}`);
     }

@@ -179,6 +179,52 @@ export const test = base.extend<Fixtures>({
 - Toggle masking at runtime by setting `LOG_REDACTION=off` (useful when debugging locally).
 - `ApiClient` accepts `captureRawBodies: true` to include the pre-redaction payloads in the `logEntry.rawRequest/rawResponse` fields—only enabled automatically when `PLAYWRIGHT_DEBUG_API` is set.
 
+### Logging Conventions
+
+The shared logger provides consistent, structured output across utilities and test suites. Follow these guidelines when emitting log entries:
+
+1. Use appropriate log levels:
+  - `error`: Operational failures (failed API call, unexpected exception, timeout).
+  - `warn`: Recoverable issues (retryable condition, degraded behavior, feature flag missing).
+  - `info`: High-level lifecycle events (start/end of audit, navigation steps, token acquisition, polling start/finish).
+  - `debug`: Developer-centric diagnostics (raw HTTP payloads, detailed validation decisions) – only enable locally or in short‑lived debug pipelines.
+2. Prefer structured fields over string concatenation. Add contextual metadata via the `defaultMeta` option or per‑log call (e.g. `{ caseId, attempt, durationMs }`).
+3. Avoid logging secrets or PII. Sensitive keys are auto‑masked; extend masking with `redactKeys` when introducing new secret‑bearing headers/fields.
+4. Include timing metadata for performance‑sensitive operations. Examples:
+  - Accessibility audits: `durationMs` and `reportDurationMs` in `AxeUtils.audit()` and `generateReport()`.
+  - Polling utilities: elapsed time and attempt count in `WaitUtils.waitForLocatorVisibility` error logs.
+5. When capturing API calls:
+  - Use `onResponse` to push `ApiLogEntry` objects into an array for later attachment.
+  - Convert into Playwright artefacts with `buildApiAttachment` to maintain consistent naming & formatting.
+6. Prefer dependency injection of a shared logger instead of creating ad‑hoc instances inside utilities—this preserves test run correlation and worker metadata.
+7. Disable redaction only when absolutely required for debugging (`LOG_REDACTION=off`) and NEVER commit artefacts containing live secrets.
+
+Example (adding contextual metadata):
+
+```ts
+logger.info("starting accessibility audit", { pageName, axeTags, caseId });
+// ... run audit
+logger.info("accessibility audit complete", { pageName, durationMs, violations: results.violations.length });
+```
+
+Example (instrumenting a custom polling loop):
+
+```ts
+const start = performance.now();
+for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  const visible = await locator.isVisible();
+  if (visible) {
+   logger.info("locator became visible", { attempt, durationMs: performance.now() - start });
+   break;
+  }
+  await page.waitForTimeout(intervalMs);
+}
+```
+
+If a utility needs to surface rich error details, serialise the body safely using `serialiseApiBody()` and log structured fields (`status`, `endpoint`, `method`, `bodyPreview`).
+
+For consistency, avoid `console.log` in all test code—always use the shared logger; this ensures redaction, formatting, and central attachment readiness.
+
 ### Testing Changes
 
 Run unit tests locally with:

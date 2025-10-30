@@ -5,6 +5,7 @@ import {
   type ApiClientOptions,
 } from "./api-client.js";
 import { createChildLogger, createLogger } from "../logging/logger.js";
+import { serialiseApiBody } from "./error.utils.js";
 
 export interface ServiceTokenParams {
   microservice: string;
@@ -98,15 +99,7 @@ export class ServiceAuthUtils {
     microservice: string
   ): Error {
     if (error instanceof ApiClientError) {
-      const body = error.logEntry.response.body;
-      let serialisedBody: string;
-      if (typeof body === "string") {
-        serialisedBody = body;
-      } else if (body) {
-        serialisedBody = JSON.stringify(body);
-      } else {
-        serialisedBody = "No response body";
-      }
+      const serialisedBody = serialiseApiBody(error.logEntry.response.body);
 
       return new Error(
         `${message}: ${serialisedBody} (Status Code: ${error.status}). Ensure your VPN is connected or check your URL/SECRET.`
