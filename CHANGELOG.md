@@ -135,14 +135,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.37]: https://github.com/hmcts/playwright-common/compare/v1.0.36...v1.0.37
-[1.0.36]: https://github.com/hmcts/playwright-common/compare/v1.0.35...v1.0.36
-[1.0.35]: https://github.com/hmcts/playwright-common/compare/v1.0.34...v1.0.35
-[1.0.34]: https://github.com/hmcts/playwright-common/compare/v1.0.33...v1.0.34
+[1.0.37]: https://github.com/hmcts/playwright-common/compare/v1.0.37...HEAD
+[1.0.36]: https://github.com/hmcts/playwright-common/compare/v1.0.36...v1.0.37
+[1.0.35]: https://github.com/hmcts/playwright-common/compare/v1.0.35...v1.0.36
+[1.0.34]: https://github.com/hmcts/playwright-common/compare/v1.0.34...v1.0.35
 [1.0.33]: https://github.com/hmcts/playwright-common/compare/v1.0.33...v1.0.34
 [1.0.32]: https://github.com/hmcts/playwright-common/compare/v1.0.32...v1.0.33
 [1.0.31]: https://github.com/hmcts/playwright-common/compare/v1.0.31...v1.0.32
-[1.0.30]: https://github.com/hmcts/playwright-common/compare/v1.0.29...v1.0.30
+[1.0.30]: https://github.com/hmcts/playwright-common/compare/v1.0.30...v1.0.31
 [1.0.29]: https://github.com/hmcts/playwright-common/compare/v1.0.29...v1.0.30
 [1.0.28]: https://github.com/hmcts/playwright-common/compare/v1.0.28...v1.0.29
 [1.0.27]: https://github.com/hmcts/playwright-common/compare/v1.0.27...v1.0.28
