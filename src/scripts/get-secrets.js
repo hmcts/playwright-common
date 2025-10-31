@@ -21,16 +21,26 @@ if (!args || !args[0]) {
 }
 
 // Get key vault names from command args
-const keyVaultNames = args[0]?.split(",");
+const keyVaultNames = args[0]?.split(",") ?? [];
+const trimmedVaults = keyVaultNames
+  .map((name) => name.trim())
+  .filter((name) => name.length > 0);
 
-if(keyVaultNames.length === 0 || keyVaultNames.some(name => name.trim() === "")) {
+if (trimmedVaults.length === 0) {
   showUsage();
 }
 
 const exampleEnvFilePath = args[1] || DEFAULT_EXAMPLE_ENV_FILE;
 const envFilePath = args[2] || DEFAULT_ENV_FILE;
 
+/**
+ * Retrieve secrets from a single Azure Key Vault tagged for E2E usage.
+ *
+ * @param {string} keyVaultName
+ * @returns {Record<string, string>}
+ */
 function getTaggedSecrets(keyVaultName) {
+  /** @type {Record<string, string>} */
   const secretsMap = {};
   const rawSecrets = execSync(
     `az keyvault secret list --vault-name ${keyVaultName} --query "[].{id:id, tags:tags}" -o json`,
@@ -38,6 +48,11 @@ function getTaggedSecrets(keyVaultName) {
   );
 
   const secrets = JSON.parse(rawSecrets);
+  if (!Array.isArray(secrets)) {
+    throw new Error(
+      `Unexpected response when listing secrets for ${keyVaultName}`
+    );
+  }
 
   for (const secret of secrets) {
     const secretId = secret.id;
@@ -59,6 +74,13 @@ function getTaggedSecrets(keyVaultName) {
   return secretsMap;
 }
 
+/**
+ * Write the resolved secrets to the env file, keeping the example structure.
+ *
+ * @param {Record<string, string>} secretsMap
+ * @param {string} exampleEnvFilePath
+ * @param {string} envFilePath
+ */
 function updateEnvFile(secretsMap, exampleEnvFilePath, envFilePath) {
   if (!fs.existsSync(exampleEnvFilePath)) {
     console.error(`${exampleEnvFilePath} file not found.`);
@@ -84,15 +106,11 @@ function updateEnvFile(secretsMap, exampleEnvFilePath, envFilePath) {
 /**
  * Populates the .env file with secrets from Azure key vault. Maintains the structure of the .env.example file.
  */
-function populateSecrets(
-) {
+function populateSecrets() {
   try {
-    const vaults = Array.isArray(keyVaultNames)
-      ? keyVaultNames
-      : [keyVaultNames];
-
+    /** @type {Record<string, string>} */
     const allSecrets = {};
-    for (const vault of vaults) {
+    for (const vault of trimmedVaults) {
       const secrets = getTaggedSecrets(vault);
       for (const [key, value] of Object.entries(secrets)) {
         allSecrets[key] = value;
@@ -101,7 +119,8 @@ function populateSecrets(
 
     updateEnvFile(allSecrets, exampleEnvFilePath, envFilePath);
   } catch (err) {
-    console.error("Error:", err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Error:", message);
     process.exit(1);
   }
 }

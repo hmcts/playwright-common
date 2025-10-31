@@ -18,4 +18,21 @@ export { SessionUtils } from "./utils/session.utils.js";
 export { TableUtils } from "./utils/table.utils.js";
 export { ValidatorUtils } from "./utils/validator.utils.js";
 export { WaitUtils } from "./utils/wait.utils.js";
-export { ServiceAuthUtils } from "./utils/service-auth.utils.js"
+export { ServiceAuthUtils } from "./utils/service-auth.utils.js";
+export {
+  createLogger,
+  createChildLogger,
+  REDACTED_VALUE,
+  type LogFormat,
+  type LoggerOptions,
+} from "./logging/logger.js";
+export {
+  ApiClient,
+  ApiClientError,
+  buildApiAttachment,
+  type ApiAttachmentOptions,
+  type ApiClientOptions,
+  type ApiLogEntry,
+  type ApiRequestOptions,
+  type ApiResponsePayload,
+} from "./utils/api-client.js";

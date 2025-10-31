@@ -1,17 +1,14 @@
 import { Page, expect } from "@playwright/test";
 
-export class ExuiSpinnerComponent{
-  constructor(public page: Page) {}
+export class ExuiSpinnerComponent {
+  constructor(public readonly page: Page) {}
 
   readonly spinner = this.page.locator("xuilib-loading-spinner");
 
-  async wait() {
+  public async wait(): Promise<void> {
     await expect
       .poll(
-        async () => {
-          const spinnerCount = await this.spinner.count();
-          return spinnerCount;
-        },
+        async () => this.spinner.count(),
         {
           timeout: 60_000,
         }

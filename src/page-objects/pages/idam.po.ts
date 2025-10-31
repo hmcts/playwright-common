@@ -7,7 +7,7 @@ export interface UserCredentials {
   cookieName?: string;
 }
 export class IdamPage {
-  constructor(public page: Page) {}
+  constructor(public readonly page: Page) {}
 
   readonly heading = this.page.getByRole("heading", {
     name: "Sign in or create an account",
@@ -16,14 +16,16 @@ export class IdamPage {
   readonly passwordInput = this.page.locator("#password");
   readonly submitBtn = this.page.locator('[name="save"]');
 
-  async login(user: UserCredentials): Promise<void> {
+  public async login(user: UserCredentials): Promise<void> {
     await this.usernameInput.fill(user.username);
     await this.passwordInput.fill(user.password);
     await this.submitBtn.click();
-    if (user.sessionFile) await this.saveSession(user);
+    if (user.sessionFile) {
+      await this.saveSession(user.sessionFile);
+    }
   }
 
-  private async saveSession(user: UserCredentials) {
-    await this.page.context().storageState({ path: user.sessionFile });
+  private async saveSession(sessionFile: string): Promise<void> {
+    await this.page.context().storageState({ path: sessionFile });
   }
 }

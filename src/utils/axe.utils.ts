@@ -1,6 +1,8 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { Page, expect, TestInfo } from "@playwright/test";
 import { createHtmlReport } from "axe-html-reporter";
+import type { Logger } from "winston";
+import { createChildLogger, createLogger } from "../logging/logger.js";
 
 interface AuditOptions {
   exclude?: string | string[];
@@ -13,8 +15,11 @@ interface AxeAuditResult {
   results: Awaited<ReturnType<AxeBuilder["analyze"]>>;
 }
 
+const normaliseArray = <T>(value?: T | T[]): T[] =>
+  value === undefined ? [] : Array.isArray(value) ? value : [value];
+
 export class AxeUtils {
-  private readonly DEFAULT_TAGS = [
+  private static readonly DEFAULT_TAGS = [
     "wcag2a",
     "wcag2aa",
     "wcag21a",
@@ -25,17 +30,25 @@ export class AxeUtils {
 
   private resultsList: AxeAuditResult[] = [];
 
-  constructor(protected readonly page: Page) {}
+  private static readonly BASE_LOGGER: Logger = createChildLogger(
+    createLogger(),
+    { component: "axe" }
+  );
+
+  private readonly logger: Logger;
+
+  constructor(protected readonly page: Page) {
+    this.logger = AxeUtils.BASE_LOGGER;
+  }
 
   private applySelectors(
     builder: AxeBuilder,
     method: "exclude" | "include",
     selectors?: string | string[]
-  ) {
-    if (!selectors) return;
-    (Array.isArray(selectors) ? selectors : [selectors]).forEach((selector) =>
-      builder[method](selector)
-    );
+  ): void {
+    for (const selector of normaliseArray(selectors)) {
+      builder[method](selector);
+    }
   }
 
   /**
@@ -44,27 +57,42 @@ export class AxeUtils {
    * @param options {@link AuditOptions} - Optional config such as excluding element(s)
    *
    */
-  public async audit(options?: AuditOptions) {
+  public async audit(options?: AuditOptions): Promise<void> {
+    const start = Date.now();
     const builder = new AxeBuilder({ page: this.page }).withTags(
-      this.DEFAULT_TAGS
+      AxeUtils.DEFAULT_TAGS
     );
     this.applySelectors(builder, "exclude", options?.exclude);
     this.applySelectors(builder, "include", options?.include);
 
-    if (options?.disableRules) builder.disableRules(options.disableRules);
+    const disableRules = normaliseArray(options?.disableRules);
+    if (disableRules.length > 0) {
+      builder.disableRules(disableRules);
+    }
     const results = await builder.analyze();
     this.resultsList.push({ url: this.page.url(), results });
 
-    if (process.env.PWDEBUG) {
+    const durationMs = Date.now() - start;
+    const isDebugLoggingEnabled =
+      process.env.PWDEBUG === "1" ||
+      process.env.PWDEBUG?.toLowerCase() === "true";
+    if (isDebugLoggingEnabled) {
+      this.logger.info("Accessibility audit completed", {
+        url: this.page.url(),
+        durationMs,
+        violationCount: results.violations.length,
+      });
       if (results.violations.length > 0) {
-        console.log(`Accessibility issues found on ${this.page.url()}:`);
-        results.violations.forEach((violation) => {
-          console.log(`${violation.id}: ${violation.description}`);
-          console.log(`Impact: ${violation.impact}`);
-          console.log(
-            `Affected nodes:`,
-            violation.nodes.map((node) => node.html).join("\n")
-          );
+        this.logger.warn("Accessibility issues detected", {
+          url: this.page.url(),
+          durationMs,
+          violationCount: results.violations.length,
+          violations: results.violations.map((v) => ({
+            id: v.id,
+            impact: v.impact,
+            description: v.description,
+            nodes: v.nodes.map((n) => n.html),
+          })),
         });
       }
     }
@@ -79,24 +107,31 @@ export class AxeUtils {
    * @param testInfo - Playwright TestInfo object to attach the report
    * @param reportName - Optional name for the report file
    */
-  public async generateReport(testInfo: TestInfo, reportName?: string) {
-    if (this.resultsList.length === 0) return;
+  public async generateReport(
+    testInfo: TestInfo,
+    reportName?: string
+  ): Promise<void> {
+    if (this.resultsList.length === 0) {
+      return;
+    }
 
     // Combine all results into one HTML report
     const htmlSections = this.resultsList.map(({ url, results }, idx) => {
-      const urlEndpoint = url.split('/').slice(-3).join('/');
+      const urlEndpoint = url.split("/").slice(-3).join("/");
       const unique = `_${idx}`;
-      let htmlReport = createHtmlReport({
-        results,
-        options: {
-          projectKey: `${urlEndpoint}`,
-          doNotCreateReportFile: true,
-        },
-      });
+      const htmlReport = this.getUpdatedHtmlReport(
+        createHtmlReport({
+          results,
+          options: {
+            projectKey: `${urlEndpoint}`,
+            doNotCreateReportFile: true,
+          },
+        }),
+        unique
+      );
 
-      htmlReport = this.getUpdatedHtmlReport(htmlReport, unique);
-
-      const reportFileName = (results.violations.length > 0 ? "FAILED " : "") + urlEndpoint;
+      const reportFileName =
+        (results.violations.length > 0 ? "FAILED " : "") + urlEndpoint;
       return `
       <details>
         <summary><strong>Page ${idx + 1}: ${reportFileName}</strong></summary>
@@ -105,6 +140,7 @@ export class AxeUtils {
     `;
     });
 
+    const reportStart = Date.now();
     const consolidatedHtml = `
         <html>
           <head>
@@ -116,48 +152,56 @@ export class AxeUtils {
         </head>
           <body>
             <h1>Consolidated Accessibility Report</h1>
-            ${htmlSections.join('<hr/>')}
+            ${htmlSections.join("<hr/>")}
           </body>
         </html>
       `;
 
-    await testInfo.attach(reportName ?? 'Consolidated Accessibility Report', {
+    await testInfo.attach(reportName ?? "Consolidated Accessibility Report", {
       body: consolidatedHtml,
-      contentType: 'text/html',
+      contentType: "text/html",
     });
-
+    const reportDurationMs = Date.now() - reportStart;
+    this.logger.info("Accessibility consolidated report attached", {
+      pages: this.resultsList.length,
+      pagesWithViolations: this.resultsList.filter(
+        (result) => result.results.violations.length > 0
+      ).length,
+      generationDurationMs: reportDurationMs,
+      reportName: reportName ?? "Consolidated Accessibility Report",
+    });
     this.resultsList = []; // reset for next test
   }
 
-  private getUpdatedHtmlReport(htmlReport: string, unique: string) {
+  private getUpdatedHtmlReport(htmlReport: string, unique: string): string {
     return htmlReport
-      .replace(/id="accordionPasses"/g, `id="accordionPasses${unique}"`)
-      .replace(/id="headingOne"/g, `id="headingOne${unique}"`)
-      .replace(/data-target="#passes"/g, `data-target="#passes${unique}"`)
-      .replace(/aria-controls="passes"/g, `aria-controls="passes${unique}"`)
-      .replace(/id="passes"/g, `id="passes${unique}"`)
-      .replace(/aria-labelledby="headingOne"/g, `aria-labelledby="headingOne${unique}"`)
-      .replace(/id="accordionIncomplete"/g, `id="accordionIncomplete${unique}"`)
-      .replace(/id="headingTwo"/g, `id="headingTwo${unique}"`)
-      .replace(/data-target="#incomplete"/g, `data-target="#incomplete${unique}"`)
-      .replace(/aria-controls="incomplete"/g, `aria-controls="incomplete${unique}"`)
-      .replace(/id="incomplete"/g, `id="incomplete${unique}"`)
-      .replace(/aria-labelledby="headingTwo"/g, `aria-labelledby="headingTwo${unique}"`)
-      .replace(/id="accordionInapplicable"/g, `id="accordionInapplicable${unique}"`)
-      .replace(/id="headingThree"/g, `id="headingThree${unique}"`)
-      .replace(/data-target="#inapplicable"/g, `data-target="#inapplicable${unique}"`)
-      .replace(/aria-controls="inapplicable"/g, `aria-controls="inapplicable${unique}"`)
-      .replace(/id="inapplicable"/g, `id="inapplicable${unique}"`)
-      .replace(/aria-labelledby="headingThree"/g, `aria-labelledby="headingThree${unique}"`)
-      .replace(/id="rulesSection"/g, `id="rulesSection${unique}"`)
-      .replace(/id="ruleSection"/g, `id="ruleSection${unique}"`)
-      .replace(/data-target="#rules"/g, `data-target="#rules${unique}"`)
-      .replace(/aria-controls="rules"/g, `aria-controls="rules${unique}"`)
-      .replace(/id="rules"/g, `id="rules${unique}"`)
-      .replace(/aria-labelledby="ruleSection"/g, `aria-labelledby="ruleSection${unique}"`)
-      .replace(/data-parent="#accordionPasses"/g, `data-parent="#accordionPasses${unique}"`)
-      .replace(/data-parent="#accordionIncomplete"/g, `data-parent="#accordionIncomplete${unique}"`)
-      .replace(/data-parent="#accordionInapplicable"/g, `data-parent="#accordionInapplicable${unique}"`)
-      .replace(/data-parent="#rules"/g, `data-parent="#rules${unique}"`);
+      .replaceAll('id="accordionPasses"', `id="accordionPasses${unique}"`)
+      .replaceAll('id="headingOne"', `id="headingOne${unique}"`)
+      .replaceAll('data-target="#passes"', `data-target="#passes${unique}"`)
+      .replaceAll('aria-controls="#passes"', `aria-controls="#passes${unique}"`)
+      .replaceAll('id="passes"', `id="passes${unique}"`)
+      .replaceAll('aria-labelledby="headingOne"', `aria-labelledby="headingOne${unique}"`)
+      .replaceAll('id="accordionIncomplete"', `id="accordionIncomplete${unique}"`)
+      .replaceAll('id="headingTwo"', `id="headingTwo${unique}"`)
+      .replaceAll('data-target="#incomplete"', `data-target="#incomplete${unique}"`)
+      .replaceAll('aria-controls="#incomplete"', `aria-controls="#incomplete${unique}"`)
+      .replaceAll('id="incomplete"', `id="incomplete${unique}"`)
+      .replaceAll('aria-labelledby="headingTwo"', `aria-labelledby="headingTwo${unique}"`)
+      .replaceAll('id="accordionInapplicable"', `id="accordionInapplicable${unique}"`)
+      .replaceAll('id="headingThree"', `id="headingThree${unique}"`)
+      .replaceAll('data-target="#inapplicable"', `data-target="#inapplicable${unique}"`)
+      .replaceAll('aria-controls="#inapplicable"', `aria-controls="#inapplicable${unique}"`)
+      .replaceAll('id="inapplicable"', `id="inapplicable${unique}"`)
+      .replaceAll('aria-labelledby="headingThree"', `aria-labelledby="headingThree${unique}"`)
+      .replaceAll('id="rulesSection"', `id="rulesSection${unique}"`)
+      .replaceAll('id="ruleSection"', `id="ruleSection${unique}"`)
+      .replaceAll('data-target="#rules"', `data-target="#rules${unique}"`)
+      .replaceAll('aria-controls="#rules"', `aria-controls="#rules${unique}"`)
+      .replaceAll('id="rules"', `id="rules${unique}"`)
+      .replaceAll('aria-labelledby="ruleSection"', `aria-labelledby="ruleSection${unique}"`)
+      .replaceAll('data-parent="#accordionPasses"', `data-parent="#accordionPasses${unique}"`)
+      .replaceAll('data-parent="#accordionIncomplete"', `data-parent="#accordionIncomplete${unique}"`)
+      .replaceAll('data-parent="#accordionInapplicable"', `data-parent="#accordionInapplicable${unique}"`)
+      .replaceAll('data-parent="#rules"', `data-parent="#rules${unique}"`);
   }
 }

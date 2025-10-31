@@ -3,6 +3,24 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.37]
+
+- Added
+  - Winston-based logger factory with structured metadata support for Playwright tests.
+  - Shared API client helper with sanitised request/response logging and attachment tooling.
+  - Vitest coverage for logging, redaction, IdAM, ServiceAuth, and API client utilities.
+  - Entry points for the new logging utilities.
+
+- Changed
+  - Hardened redaction logic to cope with circular structures, arrays, and nested secrets.
+  - Migrated IdAM and ServiceAuth helpers to the shared telemetry/logging pipeline.
+  - Documented logging usage and environment toggles; declared missing peer dependencies.
+  - Bumped Playwright dependencies to v1.56.1.
+  - Fixed minor spelling issues highlighted by linting.
+  - Hardened shared wait, validator, browser, session, table and accessibility helpers to improve resiliency, trim logging noise and remove unsafe casts.
+  - Tightened service and IDAM client behaviour (token parsing, OAuth payload construction, logger propagation) plus readonly configuration exports.
+  - Improved CLI scripts (`delete-nightly-dev-branch`, `get-secrets`) with stronger validation and clearer error handling.
+
 ## [1.0.36]
 
 - Added delete nightly branch script which can be run via yarn cli command.
@@ -117,7 +135,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.35]: https://github.com/hmcts/playwright-common/compare/v1.0.35...HEAD
+[1.0.37]: https://github.com/hmcts/playwright-common/compare/v1.0.37...HEAD
+[1.0.36]: https://github.com/hmcts/playwright-common/compare/v1.0.36...v1.0.37
+[1.0.35]: https://github.com/hmcts/playwright-common/compare/v1.0.35...v1.0.36
 [1.0.34]: https://github.com/hmcts/playwright-common/compare/v1.0.34...v1.0.35
 [1.0.33]: https://github.com/hmcts/playwright-common/compare/v1.0.33...v1.0.34
 [1.0.32]: https://github.com/hmcts/playwright-common/compare/v1.0.32...v1.0.33

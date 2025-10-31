@@ -2,7 +2,11 @@ import { Cookie } from "@playwright/test";
 import * as fs from "fs";
 
 export class SessionUtils {
-  constructor() {}
+  private static readonly SAFE_EXPIRY_WINDOW_MS = 2 * 60 * 60 * 1_000;
+
+  private constructor() {
+    // Utility class; prevent instantiation.
+  }
 
   /**
    * Returns JSON-parsed cookies from a given file
@@ -10,9 +14,21 @@ export class SessionUtils {
    * @param filepath {@link string} - path of the cookie file
    *
    */
-  public static getCookies(filepath: string) {
-    const data = fs.readFileSync(filepath, "utf8");
-    return JSON.parse(data).cookies;
+  public static getCookies(filepath: string): Cookie[] {
+    try {
+      const data = fs.readFileSync(filepath, "utf8");
+      const parsed = JSON.parse(data);
+      if (!Array.isArray(parsed?.cookies)) {
+        throw new Error("cookies property missing or invalid");
+      }
+      return parsed.cookies as Cookie[];
+    } catch (error) {
+      throw new Error(
+        `Could not read cookies from ${filepath}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
 
   /**
@@ -23,21 +39,33 @@ export class SessionUtils {
    *
    */
   public static isSessionValid(path: string, cookieName: string): boolean {
-    // consider the cookie valid if there's at least 2 hours left on the session
-    const expiryTime = 2 * 60 * 60 * 1000;
-
-    // In the case the file doesn't exist, it should attempt to login
-    if (!fs.existsSync(path)) return false;
+    if (!fs.existsSync(path)) {
+      return false;
+    }
 
     try {
       const data = JSON.parse(fs.readFileSync(path, "utf-8"));
-      const cookie = data.cookies.find(
+      const cookies = Array.isArray(data?.cookies) ? data.cookies : [];
+      const targetCookie = cookies.find(
         (cookie: Cookie) => cookie.name === cookieName
       );
-      const expiry = new Date(cookie.expires * 1000);
-      return expiry.getTime() - Date.now() > expiryTime;
+
+      if (!targetCookie || typeof targetCookie.expires !== "number") {
+        return false;
+      }
+
+      const expiryMs = targetCookie.expires * 1_000;
+      if (!Number.isFinite(expiryMs)) {
+        return false;
+      }
+
+      return expiryMs - Date.now() > SessionUtils.SAFE_EXPIRY_WINDOW_MS;
     } catch (error) {
-      throw new Error(`Could not read session data: ${error} for ${path}`);
+      throw new Error(
+        `Could not read session data from ${path}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
   }
 }
