@@ -140,4 +140,70 @@ describe("ServiceAuthUtils", () => {
       utils.retrieveToken({ microservice: "prl-cos-api" })
     ).rejects.toThrow(/Failed to fetch S2S token/);
   });
+
+  it("allows the secret to be provided per request", async () => {
+    const { instance: client, mock } = createApiClientMock();
+    mock.post.mockResolvedValue(buildResponse("token-value"));
+
+    delete process.env.S2S_SECRET;
+    const utils = new ServiceAuthUtils({
+      client,
+      logger: silentLogger(),
+    });
+
+    const token = await utils.retrieveToken({
+      microservice: "prl-cos-api",
+      secret: "override-secret",
+    });
+    expect(token).toBe("token-value");
+    expect(mock.post).toHaveBeenCalledWith(
+      "",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: expect.stringMatching(/^Basic /),
+        }),
+      })
+    );
+  });
+
+  it("allows the secret to be provided via constructor options", async () => {
+    const { instance: client, mock } = createApiClientMock();
+    mock.post.mockResolvedValue(buildResponse("token-value"));
+
+    delete process.env.S2S_SECRET;
+    const utils = new ServiceAuthUtils({
+      client,
+      logger: silentLogger(),
+      secret: "options-secret",
+    });
+
+    const token = await utils.retrieveToken({
+      microservice: "prl-cos-api",
+    });
+    expect(token).toBe("token-value");
+    expect(mock.post).toHaveBeenCalledWith(
+      "",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: expect.stringMatching(/^Basic /),
+        }),
+      })
+    );
+  });
+
+  it("throws a helpful error when no secret is available", async () => {
+    const { instance: client } = createApiClientMock();
+
+    delete process.env.S2S_SECRET;
+    const utils = new ServiceAuthUtils({
+      client,
+      logger: silentLogger(),
+    });
+
+    await expect(
+      utils.retrieveToken({ microservice: "prl-cos-api" })
+    ).rejects.toThrow(
+      /Missing service secret\. Provide ServiceTokenParams\.secret or set S2S_SECRET\./
+    );
+  });
 });

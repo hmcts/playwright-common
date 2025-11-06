@@ -9,12 +9,14 @@ import { serialiseApiBody } from "./error.utils.js";
 
 export interface ServiceTokenParams {
   microservice: string;
+  secret?: string;
 }
 
 export interface ServiceAuthUtilsOptions {
   logger?: Logger;
   client?: ApiClient;
   correlationId?: string;
+  secret?: string;
   apiClientOptions?: Pick<
     ApiClientOptions,
     "redaction" | "captureRawBodies" | "onResponse"
@@ -23,18 +25,17 @@ export interface ServiceAuthUtilsOptions {
 
 export class ServiceAuthUtils {
   private readonly serviceAuthUrl: string;
-  private readonly serviceAuthSecret: string;
+  private readonly serviceAuthSecret?: string;
   private readonly logger: Logger;
   private readonly client: ApiClient;
 
   constructor(options?: ServiceAuthUtilsOptions) {
     this.serviceAuthUrl = process.env.S2S_URL ?? "";
-    this.serviceAuthSecret = process.env.S2S_SECRET ?? "";
+    this.serviceAuthSecret =
+      options?.secret ?? process.env.S2S_SECRET ?? undefined;
 
-    if (!this.serviceAuthUrl || !this.serviceAuthSecret) {
-      throw new Error(
-        "Missing required environment variables: S2S_URL and/or S2S_SECRET"
-      );
+    if (!this.serviceAuthUrl) {
+      throw new Error("Missing required environment variable: S2S_URL");
     }
     this.logger =
       options?.logger ??
@@ -61,6 +62,13 @@ export class ServiceAuthUtils {
    */
   public async retrieveToken(payload: ServiceTokenParams): Promise<string> {
     try {
+      const secret = payload.secret ?? this.serviceAuthSecret;
+      if (!secret) {
+        throw new Error(
+          "Missing service secret. Provide ServiceTokenParams.secret or set S2S_SECRET."
+        );
+      }
+
       const response = await this.client.post<string>("", {
         data: {
           microservice: payload.microservice,
@@ -70,7 +78,7 @@ export class ServiceAuthUtils {
           accept: "*/*",
           Authorization: ServiceAuthUtils.buildBasicAuthHeader(
             payload.microservice,
-            this.serviceAuthSecret
+            secret
           ),
         },
         responseType: "text",

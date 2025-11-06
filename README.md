@@ -64,20 +64,42 @@ IDAM_WEB_URL=https://idam-web-public.demo.platform.hmcts.net
 IDAM_TESTING_SUPPORT_URL=https://idam-testing-support-api.demo.platform.hmcts.net
 ```
 #### ServiceAuthUtils Requirements
-To use the `ServiceAuthUtils` class, you must configure the following environment variables in your repository:
+`ServiceAuthUtils` is the helper that talks to the HMCTS service-to-service (S2S) gateway. It always needs the gateway URL, but you get to choose how to provide the secret:
 
-- `S2S_URL`
-- `S2S_SECRET` (the client secret used when generating a lease token)
+- Set `S2S_URL` in your environment (required).
+- Decide how the secret is supplied:
+  - **Environment variable** – set `S2S_SECRET` once and share it across every request.
+  - **Constructor option** – pass `secret` when you create the helper so the value can come straight from a secret store.
+  - **Per call** – include `secret` in `ServiceTokenParams` if the value varies by microservice.
 
-**For AAT environment:**
+The lookup order is _per call → constructor → environment_. If all three are empty the helper throws `Missing service secret...`, so you get a clear signal that a secret is still required for that specific request.
+
+That means you can happily run without an `S2S_SECRET` environment variable as long as one of the other two paths supplies the value.
+
+**AAT shared-secret example**
 ```env
-S2S_URL = http://rpe-service-auth-provider-aat.service.core-compute-aat.internal/testing-support/lease 
-S2S_SECRET = <fetch from Azure Key Vault>
+S2S_URL=http://rpe-service-auth-provider-aat.service.core-compute-aat.internal/testing-support/lease
+S2S_SECRET=<fetch from Azure Key Vault>
 ```
-**For DEMO environment:**
+**DEMO shared-secret example**
 ```env
-S2S_URL = http://rpe-service-auth-provider-demo.service.core-compute-demo.internal/testing-support/lease
-S2S_SECRET = <fetch from Azure Key Vault>
+S2S_URL=http://rpe-service-auth-provider-demo.service.core-compute-demo.internal/testing-support/lease
+S2S_SECRET=<fetch from Azure Key Vault>
+```
+
+**Constructor secret example**
+```ts
+const utils = new ServiceAuthUtils({
+  secret: getSecretFromVault(), // keeps the secret out of env vars
+});
+```
+
+**Per-request secret example**
+```ts
+const token = await utils.retrieveToken({
+  microservice: "my-service",
+  secret: getSecretFor("my-service"),
+});
 ```
 
 ### Logging & API Client
