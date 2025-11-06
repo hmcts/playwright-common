@@ -3,6 +3,10 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.38]
+
+- Updated S2S_SECRET is now optional.
+
 ## [1.0.37]
 
 - Added
@@ -135,7 +139,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.37]: https://github.com/hmcts/playwright-common/compare/v1.0.37...HEAD
+[1.0.38]: https://github.com/hmcts/playwright-common/compare/v1.0.38...HEAD
+[1.0.37]: https://github.com/hmcts/playwright-common/compare/v1.0.37...v1.0.38
 [1.0.36]: https://github.com/hmcts/playwright-common/compare/v1.0.36...v1.0.37
 [1.0.35]: https://github.com/hmcts/playwright-common/compare/v1.0.35...v1.0.36
 [1.0.34]: https://github.com/hmcts/playwright-common/compare/v1.0.34...v1.0.35
