@@ -191,19 +191,26 @@ describe("ServiceAuthUtils", () => {
     );
   });
 
-  it("throws a helpful error when no secret is available", async () => {
-    const { instance: client } = createApiClientMock();
+  it("falls back to legacy behaviour when no secret is available", async () => {
+    const { instance: client, mock } = createApiClientMock();
+    mock.post.mockResolvedValue(buildResponse("token-value"));
 
     delete process.env.S2S_SECRET;
+    const logger = silentLogger();
+    const infoSpy = vi.spyOn(logger, "info");
     const utils = new ServiceAuthUtils({
       client,
-      logger: silentLogger(),
+      logger,
     });
 
-    await expect(
-      utils.retrieveToken({ microservice: "prl-cos-api" })
-    ).rejects.toThrow(
-      /Missing service secret\. Provide ServiceTokenParams\.secret or set S2S_SECRET\./
+    const token = await utils.retrieveToken({ microservice: "prl-cos-api" });
+    expect(token).toBe("token-value");
+
+    const [, request] = mock.post.mock.calls[0];
+    expect(request.headers.Authorization).toBeUndefined();
+    expect(infoSpy).toHaveBeenCalledWith(
+      "No S2S secret provided; sending request without Authorization header.",
+      expect.objectContaining({ microservice: "prl-cos-api" })
     );
   });
 });

@@ -72,9 +72,7 @@ IDAM_TESTING_SUPPORT_URL=https://idam-testing-support-api.demo.platform.hmcts.ne
   - **Constructor option** – pass `secret` when you create the helper so the value can come straight from a secret store.
   - **Per call** – include `secret` in `ServiceTokenParams` if the value varies by microservice.
 
-The lookup order is _per call → constructor → environment_. If all three are empty the helper throws `Missing service secret...`, so you get a clear signal that a secret is still required for that specific request.
-
-That means you can happily run without an `S2S_SECRET` environment variable as long as one of the other two paths supplies the value.
+The lookup order is _per call → constructor → environment_. If all three are empty the helper keeps the legacy behaviour: it logs an informational message and sends the request without an `Authorization` header. (Most HMCTS services still require a secret, so expect the gateway to reject the call—this just avoids breaking older projects that relied on the previous implementation.)
 
 **AAT shared-secret example**
 ```env
@@ -87,19 +85,25 @@ S2S_URL=http://rpe-service-auth-provider-demo.service.core-compute-demo.internal
 S2S_SECRET=<fetch from Azure Key Vault>
 ```
 
-**Constructor secret example**
+**Constructor secret example**  
+Good when you fetch the secret from a vault at startup.
 ```ts
 const utils = new ServiceAuthUtils({
   secret: getSecretFromVault(), // keeps the secret out of env vars
 });
 ```
 
-**Per-request secret example**
+**Per-request secret example**  
+Use this when each microservice has its own lease secret.
 ```ts
 const token = await utils.retrieveToken({
   microservice: "my-service",
   secret: getSecretFor("my-service"),
 });
+```
+
+> **Why does the helper still demand a secret?**  
+> The HMCTS S2S gateway almost always expects both a microservice name and a matching secret. Allowing `S2S_SECRET` to be optional simply lets you fetch or compute the value at runtime. When no secret is provided the helper now logs `"No S2S secret provided; sending request without Authorization header."` and performs the request exactly as the pre‑1.0.37 version did—useful for legacy suites that never set a secret. Newer suites should continue to send a secret to avoid 401 responses.
 ```
 
 ### Logging & API Client

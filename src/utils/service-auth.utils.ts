@@ -63,9 +63,22 @@ export class ServiceAuthUtils {
   public async retrieveToken(payload: ServiceTokenParams): Promise<string> {
     try {
       const secret = payload.secret ?? this.serviceAuthSecret;
-      if (!secret) {
-        throw new Error(
-          "Missing service secret. Provide ServiceTokenParams.secret or set S2S_SECRET."
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+        accept: "*/*",
+      };
+
+      if (secret) {
+        headers.Authorization = ServiceAuthUtils.buildBasicAuthHeader(
+          payload.microservice,
+          secret
+        );
+      } else {
+        this.logger.info(
+          "No S2S secret provided; sending request without Authorization header.",
+          {
+            microservice: payload.microservice,
+          }
         );
       }
 
@@ -73,14 +86,7 @@ export class ServiceAuthUtils {
         data: {
           microservice: payload.microservice,
         },
-        headers: {
-          "content-type": "application/json",
-          accept: "*/*",
-          Authorization: ServiceAuthUtils.buildBasicAuthHeader(
-            payload.microservice,
-            secret
-          ),
-        },
+        headers,
         responseType: "text",
       });
 
