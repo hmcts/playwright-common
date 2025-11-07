@@ -140,4 +140,77 @@ describe("ServiceAuthUtils", () => {
       utils.retrieveToken({ microservice: "prl-cos-api" })
     ).rejects.toThrow(/Failed to fetch S2S token/);
   });
+
+  it("allows the secret to be provided per request", async () => {
+    const { instance: client, mock } = createApiClientMock();
+    mock.post.mockResolvedValue(buildResponse("token-value"));
+
+    delete process.env.S2S_SECRET;
+    const utils = new ServiceAuthUtils({
+      client,
+      logger: silentLogger(),
+    });
+
+    const token = await utils.retrieveToken({
+      microservice: "prl-cos-api",
+      secret: "override-secret",
+    });
+    expect(token).toBe("token-value");
+    expect(mock.post).toHaveBeenCalledWith(
+      "",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: expect.stringMatching(/^Basic /),
+        }),
+      })
+    );
+  });
+
+  it("allows the secret to be provided via constructor options", async () => {
+    const { instance: client, mock } = createApiClientMock();
+    mock.post.mockResolvedValue(buildResponse("token-value"));
+
+    delete process.env.S2S_SECRET;
+    const utils = new ServiceAuthUtils({
+      client,
+      logger: silentLogger(),
+      secret: "options-secret",
+    });
+
+    const token = await utils.retrieveToken({
+      microservice: "prl-cos-api",
+    });
+    expect(token).toBe("token-value");
+    expect(mock.post).toHaveBeenCalledWith(
+      "",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: expect.stringMatching(/^Basic /),
+        }),
+      })
+    );
+  });
+
+  it("falls back to legacy behaviour when no secret is available", async () => {
+    const { instance: client, mock } = createApiClientMock();
+    mock.post.mockResolvedValue(buildResponse("token-value"));
+
+    delete process.env.S2S_SECRET;
+    const logger = silentLogger();
+    const infoSpy = vi.spyOn(logger, "info");
+    const utils = new ServiceAuthUtils({
+      client,
+      logger,
+    });
+
+    const token = await utils.retrieveToken({ microservice: "prl-cos-api" });
+    expect(token).toBe("token-value");
+
+    const [, request] = mock.post.mock.calls[0];
+    expect(request.headers.Authorization).toBeUndefined();
+    expect(infoSpy).toHaveBeenCalledWith(
+      "No S2S secret provided; sending request without Authorization header.",
+      expect.objectContaining({ microservice: "prl-cos-api" })
+    );
+  });
 });

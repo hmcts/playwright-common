@@ -64,20 +64,46 @@ IDAM_WEB_URL=https://idam-web-public.demo.platform.hmcts.net
 IDAM_TESTING_SUPPORT_URL=https://idam-testing-support-api.demo.platform.hmcts.net
 ```
 #### ServiceAuthUtils Requirements
-To use the `ServiceAuthUtils` class, you must configure the following environment variables in your repository:
+`ServiceAuthUtils` is the helper that talks to the HMCTS service-to-service (S2S) gateway. It always needs the gateway URL, but you get to choose how to provide the secret:
 
-- `S2S_URL`
-- `S2S_SECRET` (the client secret used when generating a lease token)
+- Set `S2S_URL` in your environment (required).
+- Decide how the secret is supplied:
+  - **Environment variable** – set `S2S_SECRET` once and share it across every request.
+  - **Constructor option** – pass `secret` when you create the helper so the value can come straight from a secret store.
+  - **Per call** – include `secret` in `ServiceTokenParams` if the value varies by microservice.
 
-**For AAT environment:**
+The lookup order is _per call → constructor → environment_. If all three are empty the helper keeps the legacy behaviour: it logs an informational message and sends the request without an `Authorization` header. (Most HMCTS services still require a secret, so expect the gateway to reject the call—this just avoids breaking older projects that relied on the previous implementation.)
+
+**AAT shared-secret example**
 ```env
-S2S_URL = http://rpe-service-auth-provider-aat.service.core-compute-aat.internal/testing-support/lease 
-S2S_SECRET = <fetch from Azure Key Vault>
+S2S_URL=http://rpe-service-auth-provider-aat.service.core-compute-aat.internal/testing-support/lease
+S2S_SECRET=<fetch from Azure Key Vault>
 ```
-**For DEMO environment:**
+**DEMO shared-secret example**
 ```env
-S2S_URL = http://rpe-service-auth-provider-demo.service.core-compute-demo.internal/testing-support/lease
-S2S_SECRET = <fetch from Azure Key Vault>
+S2S_URL=http://rpe-service-auth-provider-demo.service.core-compute-demo.internal/testing-support/lease
+S2S_SECRET=<fetch from Azure Key Vault>
+```
+
+**Constructor secret example**  
+Good when you fetch the secret from a vault at startup.
+```ts
+const utils = new ServiceAuthUtils({
+  secret: getSecretFromVault(), // keeps the secret out of env vars
+});
+```
+
+**Per-request secret example**  
+Use this when each microservice has its own lease secret.
+```ts
+const token = await utils.retrieveToken({
+  microservice: "my-service",
+  secret: getSecretFor("my-service"),
+});
+```
+
+> **Why does the helper still demand a secret?**  
+> The HMCTS S2S gateway almost always expects both a microservice name and a matching secret. Allowing `S2S_SECRET` to be optional simply lets you fetch or compute the value at runtime. When no secret is provided the helper now logs `"No S2S secret provided; sending request without Authorization header."` and performs the request exactly as the pre‑1.0.37 version did—useful for legacy suites that never set a secret. Newer suites should continue to send a secret to avoid 401 responses.
 ```
 
 ### Logging & API Client
