@@ -29,30 +29,36 @@ export class TableUtils {
 
   private async mapTable(
     table: Locator,
-    headerTransform?: (header: string) => string
+    headerTransform?: (h: string) => string
   ): Promise<Record<string, string>[]> {
     await table.scrollIntoViewIfNeeded({ timeout: 30_000 });
 
-    const tableData: Record<string, string>[] = [];
-    const headers = (
-      await table.locator("thead th").allInnerTexts()
-    ).map((header) => (headerTransform ? headerTransform(header) : header));
-    const rows = table.locator("tbody tr");
+    const headers = (await table.locator('thead tr th').allInnerTexts())
+      .map(h => (headerTransform ? headerTransform(h) : h).trim());
+
+    const rows = table.locator('tbody tr');
     const rowCount = await rows.count();
+    const out: Record<string, string>[] = [];
 
     for (let i = 0; i < rowCount; i++) {
-      const rowData: Record<string, string> = {};
-      const cells = rows.nth(i).locator("td");
-
+      const row = rows.nth(i);
+      // include both th and td in body rows
+      const cells = row.locator('th, td');
       const cellCount = await cells.count();
-      for (let j = 0; j < cellCount; j++) {
-        const header = headers[j];
-        const cell = cells.nth(j);
-        rowData[header] = (await cell.innerText()).trim();
-      }
-      tableData.push(rowData);
-    }
 
-    return tableData;
+      // if there’s an extra unlabeled cell (e.g., checkbox), align from the right
+      const offset = Math.max(0, cellCount - headers.length);
+
+      const rowData: Record<string, string> = {};
+      for (let j = 0; j < headers.length && j + offset < cellCount; j++) {
+        const header = headers[j];
+        if (!header) continue;
+        const text = (await cells.nth(j + offset).innerText()).trim();
+        rowData[header] = text;
+      }
+      out.push(rowData);
+    }
+    return out;
   }
+
 }
