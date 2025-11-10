@@ -55,5 +55,5 @@
     "delete-nightly-dev-branch": "./dist/scripts/delete-nightly-dev-branch.js",
     "get-secrets": "./dist/scripts/get-secrets.js"
   },
-  "packageManager": "yarn@4.10.3"
+  "packageManager": "yarn@4.11.0"
 }
