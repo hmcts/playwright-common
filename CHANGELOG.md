@@ -143,7 +143,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.38]: https://github.com/hmcts/playwright-common/compare/v1.0.38...HEAD
+[1.0.39]: https://github.com/hmcts/playwright-common/compare/v1.0.39...HEAD
+[1.0.38]: https://github.com/hmcts/playwright-common/compare/v1.0.38...v1.0.39
 [1.0.37]: https://github.com/hmcts/playwright-common/compare/v1.0.37...v1.0.38
 [1.0.36]: https://github.com/hmcts/playwright-common/compare/v1.0.36...v1.0.37
 [1.0.35]: https://github.com/hmcts/playwright-common/compare/v1.0.35...v1.0.36
