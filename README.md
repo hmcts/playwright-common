@@ -162,6 +162,15 @@ const result = await withRetry(() => apiClient.get<any>("/health"), 3, 200);
 
 Internally, `IdamUtils` and `ServiceAuthUtils` can leverage the same helper via the opt-in environment variables above.
 
+Advanced usage:
+
+```ts
+import { withRetry, isRetryableError } from "@hmcts/playwright-common";
+
+// Retry only transient failures (5xx, 429, and common network errors)
+await withRetry(() => apiClient.get("/status"), 3, 200, 2000, 15000, isRetryableError);
+```
+
 ### Redaction patterns (security)
 
 By default, the logger/API client masks common sensitive fields and headers, including tokens, secrets, passwords, Authorization, API keys, XSRF tokens, cookies, Set-Cookie, and session keys. Extend or override via `redactKeys` or `redaction.patterns` when creating the logger/client.
@@ -169,6 +178,32 @@ By default, the logger/API client masks common sensitive fields and headers, inc
 Attachment redaction:
 - `buildApiAttachment(entry, { includeRaw })` omits `rawRequest/rawResponse` when `includeRaw=false` (recommended in CI).
 - When `includeRaw=true` (e.g., local debugging), raw payloads are included—ensure redaction toggles remain ON.
+
+### Circuit breaker (resilience)
+
+Add a minimal circuit breaker to prevent hammering failing services:
+
+```ts
+import { ApiClient } from "@hmcts/playwright-common";
+
+const client = new ApiClient({
+  baseUrl: process.env.BACKEND_BASE_URL,
+  name: "backend",
+  circuitBreaker: {
+    enabled: true,
+    options: { failureThreshold: 5, cooldownMs: 30000, halfOpenMaxAttempts: 2 },
+  },
+  onError: (err) => {
+    // Push to telemetry or aggregate metrics
+    myTelemetry.record("api-error", { status: err.status, endpoint: err.logEntry.url });
+  },
+});
+```
+
+Behavior:
+- Closed: requests flow normally.
+- Open: requests blocked until `cooldownMs` elapses.
+- Half-open: limited trial attempts; success closes the circuit, failure re-opens.
 
 Count API client calls in your Playwright specs to show what endpoints are being exercised (great for dashboards and test gap hunting).
 
@@ -367,3 +402,4 @@ See `.env.example` in the repo root for secure defaults and toggles used in CI.
 - Expanded default redaction patterns (XSRF, cookies, session) to prevent secret leakage in logs and attachments.
 - Added `withRetry` utility and opt-in wiring for IDAM/S2S token requests via environment variables.
 - Attachment redaction behavior clarified; tests ensure raw bodies are excluded unless explicitly enabled.
+- Introduced circuit breaker with `onError` hook in `ApiClient` for resilience and observability.

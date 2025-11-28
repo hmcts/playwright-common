@@ -178,7 +178,7 @@ export class IdamUtils {
         });
 
       const response = attempts > 1
-        ? await (await import("./retry.utils.js")).withRetry(exec, attempts, baseMs)
+        ? await (await import("./retry.utils.js")).withRetry(exec, attempts, baseMs, 2000, 15000, (await import("./retry.utils.js")).isRetryableError)
         : await exec();
 
       if (!response.data?.access_token) {

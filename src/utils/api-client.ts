@@ -1,6 +1,7 @@
 import { APIRequestContext, APIResponse, request } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import type { Logger } from "winston";
+import { CircuitBreaker } from "./circuit-breaker.js";
 import {
   buildRedactionState,
   sanitiseHeaders,
@@ -31,6 +32,15 @@ export interface ApiClientOptions {
   captureRawBodies?: boolean;
   correlationId?: string;
   onResponse?: (entry: ApiLogEntry) => void;
+  onError?: (error: ApiClientError) => void;
+  circuitBreaker?: {
+    enabled?: boolean;
+    options?: {
+      failureThreshold?: number;
+      cooldownMs?: number;
+      halfOpenMaxAttempts?: number;
+    };
+  };
 }
 
 type QueryParamValue = string | number | boolean | undefined;
@@ -109,6 +119,8 @@ export class ApiClient {
   private readonly captureRawBodies: boolean;
   private readonly globalCorrelationId?: string;
   private readonly onResponse?: (entry: ApiLogEntry) => void;
+  private readonly onError?: (error: ApiClientError) => void;
+  private readonly breaker?: CircuitBreaker;
   private contextPromise?: Promise<APIRequestContext>;
 
   constructor(options?: ApiClientOptions) {
@@ -134,6 +146,10 @@ export class ApiClient {
     this.captureRawBodies = options?.captureRawBodies ?? debugBodies;
     this.globalCorrelationId = options?.correlationId;
     this.onResponse = options?.onResponse;
+    this.onError = options?.onError;
+    this.breaker = options?.circuitBreaker?.enabled
+      ? new CircuitBreaker(options.circuitBreaker.options)
+      : undefined;
   }
 
   public async dispose(): Promise<void> {
@@ -190,6 +206,26 @@ export class ApiClient {
     path: string,
     options?: ApiRequestOptions
   ): Promise<ApiResponsePayload<T>> {
+    if (this.breaker && !this.breaker.canProceed()) {
+      const err = new ApiClientError(
+        "Circuit open: request blocked",
+        503,
+        {
+          id: randomUUID(),
+          name: this.name,
+          method,
+          url: this.buildUrl(path),
+          status: 503,
+          ok: false,
+          timestamp: new Date().toISOString(),
+          durationMs: 0,
+          request: {},
+          response: {},
+        }
+      );
+      this.onError?.(err);
+      throw err;
+    }
     const context = await this.getContext();
     const requestHeaders = {
       ...this.defaultHeaders,
@@ -207,7 +243,7 @@ export class ApiClient {
       data: options?.data,
       form: options?.form,
       params: this.buildParams(options?.query),
-      timeout: options?.timeoutMs,
+      timeout: options?.timeoutMs ?? 30000,
     });
 
     const durationMs = Date.now() - startTime;
@@ -281,12 +317,17 @@ export class ApiClient {
     this.onResponse?.(logEntry);
 
     if (!ok && options?.throwOnError !== false) {
-      throw new ApiClientError(
+      const err = new ApiClientError(
         `Request failed with status ${status}`,
         status,
         logEntry
       );
+      this.onError?.(err);
+      this.breaker?.onFailure();
+      throw err;
     }
+
+    this.breaker?.onSuccess();
 
     return {
       ok,
