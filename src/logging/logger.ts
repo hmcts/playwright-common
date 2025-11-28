@@ -39,10 +39,13 @@ function resolveRedactionState(options?: LoggerOptions): RedactionState {
     process.env.LOG_REDACTION === undefined
       ? undefined
       : process.env.LOG_REDACTION.toLowerCase() !== "off";
-  return buildRedactionState({
+  const redactionOptions: { enabled?: boolean; patterns?: RedactPattern[] } = {
     enabled: options?.enableRedaction ?? envToggle ?? true,
-    patterns: options?.redactKeys,
-  });
+  };
+  if (options?.redactKeys) {
+    redactionOptions.patterns = options.redactKeys;
+  }
+  return buildRedactionState(redactionOptions);
 }
 
 function applyRedactionFormat(state: RedactionState) {

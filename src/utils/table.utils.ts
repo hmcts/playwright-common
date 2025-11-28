@@ -62,8 +62,9 @@ export class TableUtils {
       return cells;
     }
 
+    const firstCell = cells.at(0);
     const selectionTrimmed =
-      cells.length > headerCount && TableUtils.looksLikeSelectionCell(cells[0])
+      cells.length > headerCount && firstCell !== undefined && TableUtils.looksLikeSelectionCell(firstCell)
         ? cells.slice(1)
         : cells;
 

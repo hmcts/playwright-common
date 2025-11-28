@@ -1,5 +1,8 @@
 # playwright-common
 
+[![npm version](https://img.shields.io/npm/v/@hmcts/playwright-common.svg)](https://www.npmjs.com/package/@hmcts/playwright-common)
+[![CI](https://github.com/hmcts/playwright-common/actions/workflows/ci.yml/badge.svg)](https://github.com/hmcts/playwright-common/actions/workflows/ci.yml)
+
 This is the shared Playwright toolkit for HMCTS projects. It ships reusable page objects, logging/telemetry, configs, and pragmatic helpers so teams can focus on writing tests—not plumbing.
 
 What you get:
@@ -150,6 +153,48 @@ if (!summary) {
 ```
 
 ### API endpoint scanner
+Supports two modes:
+
+1. Regex scanning (default): fast, works with common client call shapes.
+2. AST scanning (`useAst: true`): uses `ts-morph` for more accurate parsing of `apiClient.get("/path")` forms (skips dynamic template expressions).
+
+```ts
+import { scanApiEndpoints } from "@hmcts/playwright-common";
+
+// Regex mode (default)
+const basic = scanApiEndpoints("./playwright_tests_new/api");
+
+// AST mode
+const ast = scanApiEndpoints("./playwright_tests_new/api", { useAst: true });
+import { formatEndpointHitsMarkdown } from "@hmcts/playwright-common";
+
+const table = formatEndpointHitsMarkdown(ast); // returns a markdown table string
+console.log(table);
+```
+
+If AST mode fails (e.g. parser not available), it silently falls back to regex.
+
+#### Formatting endpoint results
+
+`formatEndpointHitsMarkdown(result)` builds a ready-to-paste Markdown table:
+
+```markdown
+| Endpoint | Hits |
+|----------|------|
+| /health  | 1    |
+| /token   | 2    |
+
+Total Hits: 3
+```
+
+Pass either the full scan result or an array of `{ endpoint, hits }`.
+
+```ts
+const result = scanApiEndpoints('./tests/api');
+const markdown = formatEndpointHitsMarkdown(result);
+writeFileSync('endpoint-hits.md', markdown);
+```
+
 ### Retry utility
 
 Use a simple exponential backoff helper for transient operations (network/API calls, polling):
@@ -204,6 +249,49 @@ Behavior:
 - Closed: requests flow normally.
 - Open: requests blocked until `cooldownMs` elapses.
 - Half-open: limited trial attempts; success closes the circuit, failure re-opens.
+
+#### Circuit breaker metrics
+
+Capture a lightweight snapshot for telemetry dashboards or Prometheus exporters:
+
+```ts
+import { ApiClient } from "@hmcts/playwright-common";
+
+const client = new ApiClient({
+  baseUrl: process.env.BACKEND_BASE_URL,
+  circuitBreaker: { enabled: true },
+});
+
+const metrics = client.getCircuitBreakerMetrics();
+/* Example shape:
+{
+  state: "closed",            // "closed" | "open" | "half-open"
+  failureCount: 0,             // accumulated consecutive failures
+  failureThreshold: 5,         // configured threshold to open
+  cooldownMs: 30000,           // open state duration before half-open trial
+  halfOpenMaxAttempts: 2,      // number of trial calls in half-open
+  openedAt?: 1732800000000,    // epoch ms when circuit entered open (undefined if never opened)
+  lastFailureAt?: 1732800000000,// epoch ms of last failure (undefined if none)
+  halfOpenTrialCount?: 0       // number of trial attempts made while half-open
+}
+*/
+
+// Push to metrics system
+if (metrics) {
+  recordGauge('circuit_state', metrics.state === 'open' ? 2 : metrics.state === 'half-open' ? 1 : 0);
+  recordGauge('circuit_failures', metrics.failureCount);
+}
+```
+
+Metrics are instantaneous; poll on an interval (e.g. every test or per request in `onError`) to build time‑series.
+
+### Error enrichment
+
+`ApiClientError` now includes:
+- `bodyPreview` – truncated (2KB) representation of the response body
+- `endpointPath` – resolved absolute endpoint
+- `elapsedMs` – request duration
+- `attempt` – reserved for future multi-attempt integrations (e.g. composed retries)
 
 Count API client calls in your Playwright specs to show what endpoints are being exercised (great for dashboards and test gap hunting).
 
@@ -333,6 +421,40 @@ export const test = base.extend<Fixtures>({
 - Pass `redactKeys: [/session/i, "x-api-key"]` when calling `createLogger`/`ApiClient` to mask additional headers or payload fields.
 - Toggle masking at runtime by setting `LOG_REDACTION=off` (useful when debugging locally).
 - `ApiClient` accepts `captureRawBodies: true` to include the pre-redaction payloads in the `logEntry.rawRequest/rawResponse` fields—only enabled automatically when `PLAYWRIGHT_DEBUG_API` is set.
+
+#### Redaction extension recipes
+
+You can inject additional masking rules via either a high-level key list (`redactKeys`) or raw regex patterns (`redaction.patterns`).
+
+```ts
+const logger = createLogger({
+  serviceName: 'payments-tests',
+  redactKeys: [/^x-pay-token$/i, /customerId/i], // key match (headers + payload)
+});
+
+const client = new ApiClient({
+  baseUrl: process.env.PAY_API_URL,
+  redaction: {
+    enabled: true,
+    patterns: [
+      { type: 'header', pattern: /x-session-id/i },
+      { type: 'body', pattern: /"sessionId"\s*:/i },
+    ],
+  },
+});
+```
+
+Performance notes:
+- Redaction runs a lightweight traversal; each additional regex adds a small cost proportional to payload size (headers + JSON string length). For typical test payloads (< 50KB) dozens of patterns remain cheap.
+- Prefer anchored or narrowly‑scoped regexes (e.g. `/^authorization$/i` instead of `/auth/i`) to reduce backtracking.
+- If you need heavy dynamic logic (e.g. decrypt then mask), perform that before calling the logger/client and keep redaction patterns simple.
+- Disable masking temporarily with `LOG_REDACTION=off` only for local debugging. Never ship artefacts produced with masking disabled.
+
+Advanced pattern strategy:
+1. Start with broad defaults (already included).
+2. Add explicit service-specific secrets (e.g. payment tokens) using exact header names.
+3. Add body field patterns only when they cannot be caught via key matching (e.g. nested serialized blobs).
+4. Periodically scan logs in CI for unmasked high-entropy values and promote new patterns.
 
 ### Logging Conventions
 

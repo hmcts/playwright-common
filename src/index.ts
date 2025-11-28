@@ -32,6 +32,7 @@ export {
   type EndpointHit,
   type EndpointScanOptions,
   type EndpointScanResult,
+  formatEndpointHitsMarkdown,
 } from "./utils/api-endpoints.utils.js";
 export { ServiceAuthUtils } from "./utils/service-auth.utils.js";
 export { withRetry } from "./utils/retry.utils.js";
@@ -52,3 +53,8 @@ export {
   type ApiRequestOptions,
   type ApiResponsePayload,
 } from "./utils/api-client.js";
+export {
+  CircuitBreaker,
+  type CircuitBreakerOptions,
+  type CircuitBreakerMetrics,
+} from "./utils/circuit-breaker.js";
