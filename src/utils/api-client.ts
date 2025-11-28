@@ -102,12 +102,16 @@ export class ApiClientError extends Error {
   public readonly endpointPath: string | undefined;
   public readonly attempt: number | undefined;
   public readonly elapsedMs: number | undefined;
+  public readonly correlationId: string | undefined;
+  public readonly retryAfterMs: number | undefined;
 
   constructor(message: string, status: number, logEntry: ApiLogEntry, meta?: {
     bodyPreview?: string;
     endpointPath?: string;
     attempt?: number;
     elapsedMs?: number;
+    correlationId?: string;
+    retryAfterMs?: number;
   }) {
     super(message);
     this.name = "ApiClientError";
@@ -117,6 +121,8 @@ export class ApiClientError extends Error {
     this.endpointPath = meta?.endpointPath;
     this.attempt = meta?.attempt;
     this.elapsedMs = meta?.elapsedMs;
+    this.correlationId = meta?.correlationId;
+    this.retryAfterMs = meta?.retryAfterMs;
   }
 }
 
@@ -285,7 +291,12 @@ export class ApiClient {
     if (options?.form !== undefined) {
       requestOptions = { ...requestOptions, form: options.form };
     }
-    const response = await context.fetch(url, requestOptions);
+    const response = await this.safeFetch(context, url, requestOptions, {
+      method,
+      correlationId,
+      path,
+      startTime,
+    });
 
     const durationMs = Date.now() - startTime;
     const status = response.status();
@@ -382,18 +393,30 @@ export class ApiClient {
     this.onResponse?.(logEntry);
 
     if (!ok && options?.throwOnError !== false) {
+      const retryAfterMs = parseRetryAfter(responseHeaders["retry-after"]);
+      const bodyPreview = buildBodyPreview(sanitisedResponseBody);
+      const errorMeta: {
+        bodyPreview?: string;
+        endpointPath?: string;
+        elapsedMs?: number;
+        correlationId?: string;
+        retryAfterMs?: number;
+      } = {
+        endpointPath: path,
+        elapsedMs: durationMs,
+        correlationId,
+      };
+      if (retryAfterMs !== undefined) {
+        errorMeta.retryAfterMs = retryAfterMs;
+      }
+      if (bodyPreview !== undefined) {
+        errorMeta.bodyPreview = bodyPreview;
+      }
       const err = new ApiClientError(
         `Request failed with status ${status}`,
         status,
         logEntry,
-        {
-          bodyPreview:
-            typeof parsedBody === "string"
-              ? parsedBody.slice(0, 2048)
-              : JSON.stringify(parsedBody ?? "", null, 2).slice(0, 2048),
-          endpointPath: this.buildUrl(path),
-          elapsedMs: durationMs,
-        }
+        errorMeta
       );
       this.onError?.(err);
       this.breaker?.onFailure();
@@ -451,6 +474,78 @@ export class ApiClient {
     }
     return params;
   }
+
+  private async safeFetch(
+    context: APIRequestContext,
+    url: string,
+    options: Parameters<APIRequestContext["fetch"]>[1],
+    meta: { method: string; correlationId: string; path: string; startTime: number }
+  ): Promise<APIResponse> {
+    try {
+      return await context.fetch(url, options);
+    } catch (error) {
+      const durationMs = Date.now() - meta.startTime;
+      const requestLog: ApiLogEntry["request"] = {};
+      if (options?.headers) {
+        requestLog.headers = options.headers as Record<string, string>;
+      }
+      const logEntry: ApiLogEntry = {
+        id: randomUUID(),
+        name: this.name,
+        method: meta.method as HttpMethod,
+        url,
+        status: 0,
+        ok: false,
+        timestamp: new Date().toISOString(),
+        durationMs,
+        correlationId: meta.correlationId,
+        request: requestLog,
+        response: {},
+        error: error instanceof Error ? error.message : String(error),
+      };
+      this.logger.error(`${meta.method} ${url} -> fetch error`, {
+        correlationId: meta.correlationId,
+        durationMs,
+        apiCall: logEntry,
+      });
+      const err = new ApiClientError(
+        `Request failed: ${error instanceof Error ? error.message : String(error)}`,
+        0,
+        logEntry,
+        {
+          endpointPath: meta.path,
+          elapsedMs: durationMs,
+          correlationId: meta.correlationId,
+        }
+      );
+      this.onError?.(err);
+      this.breaker?.onFailure();
+      throw err;
+    }
+  }
+}
+
+function buildBodyPreview(body: unknown): string | undefined {
+  if (body === undefined) return undefined;
+  const raw =
+    typeof body === "string"
+      ? body
+      : JSON.stringify(body, null, 2);
+  return raw.slice(0, 2048);
+}
+
+function parseRetryAfter(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (/^\d+$/.test(trimmed)) {
+    return Number(trimmed) * 1000;
+  }
+  const date = Date.parse(trimmed);
+  if (!Number.isNaN(date)) {
+    const diff = date - Date.now();
+    return diff > 0 ? diff : undefined;
+  }
+  return undefined;
 }
 
 async function safeReadBody(response: APIResponse): Promise<string | undefined> {
