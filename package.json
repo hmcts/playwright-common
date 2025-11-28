@@ -55,5 +55,9 @@
     "delete-nightly-dev-branch": "./dist/scripts/delete-nightly-dev-branch.js",
     "get-secrets": "./dist/scripts/get-secrets.js"
   },
+  "resolutions": {
+    "glob": "^11.0.0",
+    "esbuild": "^0.23.0"
+  },
   "packageManager": "yarn@4.11.0"
 }
