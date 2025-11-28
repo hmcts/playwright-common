@@ -34,6 +34,7 @@ export {
   type EndpointScanResult,
 } from "./utils/api-endpoints.utils.js";
 export { ServiceAuthUtils } from "./utils/service-auth.utils.js";
+export { withRetry } from "./utils/retry.utils.js";
 export {
   createLogger,
   createChildLogger,

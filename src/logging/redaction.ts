@@ -16,6 +16,10 @@ const DEFAULT_PATTERNS: RegExp[] = [
   /password/i,
   /authorization/i,
   /api[-_]?key/i,
+  /x[-_]?xsrf[-_]?token/i,
+  /cookie/i,
+  /set[-_]?cookie/i,
+  /session/i,
 ];
 
 export interface RedactionState {

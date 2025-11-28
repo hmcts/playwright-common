@@ -46,6 +46,15 @@ The shared logger and API client read the following (optional) environment varia
 - `LOG_REDACTION` – set to `off` to disable masking (default is `on`).
 - `PLAYWRIGHT_DEBUG_API` – set to `1` or `true` to capture raw API payloads for Playwright attachments.
 
+Default redaction coverage (headers/fields masked automatically):
+
+- `authorization`, `token`, `secret`, `password`, `api-key`
+- `x-xsrf-token`
+- `cookie`, `set-cookie`
+- `session`
+
+You can extend/override patterns via `redaction.patterns` or `redactKeys` when creating the logger or API client.
+
 #### IdamUtils Requirements
 To use the `IdamUtils` class, you must configure the following environment variables in your repository:
 
@@ -107,6 +116,24 @@ const token = await utils.retrieveToken({
 > **Why does the helper still demand a secret?**  
 > The HMCTS S2S gateway almost always expects both a microservice name and a matching secret. Allowing `S2S_SECRET` to be optional simply lets you fetch or compute the value at runtime. When no secret is provided the helper now logs `"No S2S secret provided; sending request without Authorization header."` and performs the request exactly as the pre‑1.0.37 version did—useful for legacy suites that never set a secret. Newer suites should continue to send a secret to avoid 401 responses.
 
+#### Optional Retry (IDAM/S2S)
+
+Transient network or gateway issues (e.g., 502/504, ECONNRESET) can be handled with opt-in retry/backoff controlled by environment variables:
+
+- `IDAM_RETRY_ATTEMPTS` and `IDAM_RETRY_BASE_MS` – applies to `IdamUtils.generateIdamToken`.
+- `S2S_RETRY_ATTEMPTS` and `S2S_RETRY_BASE_MS` – applies to `ServiceAuthUtils.retrieveToken`.
+
+Example:
+
+```env
+IDAM_RETRY_ATTEMPTS=3
+IDAM_RETRY_BASE_MS=200
+S2S_RETRY_ATTEMPTS=3
+S2S_RETRY_BASE_MS=200
+```
+
+This uses an exponential backoff with jitter. Set attempts to `1` to disable.
+
 ### Coverage utilities
 Parse `coverage-summary.json` from c8/Istanbul and produce text + table-ready rows you can inject into reports or publish as build artefacts.
 
@@ -123,6 +150,25 @@ if (!summary) {
 ```
 
 ### API endpoint scanner
+### Retry utility
+
+Use a simple exponential backoff helper for transient operations (network/API calls, polling):
+
+```ts
+import { withRetry } from "@hmcts/playwright-common";
+
+const result = await withRetry(() => apiClient.get<any>("/health"), 3, 200);
+```
+
+Internally, `IdamUtils` and `ServiceAuthUtils` can leverage the same helper via the opt-in environment variables above.
+
+### Redaction patterns (security)
+
+By default, the logger/API client masks common sensitive fields and headers, including tokens, secrets, passwords, Authorization, API keys, XSRF tokens, cookies, Set-Cookie, and session keys. Extend or override via `redactKeys` or `redaction.patterns` when creating the logger/client.
+
+Attachment redaction:
+- `buildApiAttachment(entry, { includeRaw })` omits `rawRequest/rawResponse` when `includeRaw=false` (recommended in CI).
+- When `includeRaw=true` (e.g., local debugging), raw payloads are included—ensure redaction toggles remain ON.
 
 Count API client calls in your Playwright specs to show what endpoints are being exercised (great for dashboards and test gap hunting).
 
@@ -311,3 +357,13 @@ yarn lint
 ```
 
 See [Contribution Guide](./CONTRIBUTING.md) for more info regarding testing changes & creating new release.
+
+## Example Environment (.env.example)
+
+See `.env.example` in the repo root for secure defaults and toggles used in CI.
+
+## Changelog Highlights
+
+- Expanded default redaction patterns (XSRF, cookies, session) to prevent secret leakage in logs and attachments.
+- Added `withRetry` utility and opt-in wiring for IDAM/S2S token requests via environment variables.
+- Attachment redaction behavior clarified; tests ensure raw bodies are excluded unless explicitly enabled.

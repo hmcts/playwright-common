@@ -82,13 +82,21 @@ export class ServiceAuthUtils {
         );
       }
 
-      const response = await this.client.post<string>("", {
-        data: {
-          microservice: payload.microservice,
-        },
-        headers,
-        responseType: "text",
-      });
+      // Optional retry/backoff controlled via env vars
+      const attempts = Number(process.env.S2S_RETRY_ATTEMPTS ?? 1);
+      const baseMs = Number(process.env.S2S_RETRY_BASE_MS ?? 200);
+      const exec = async () =>
+        this.client.post<string>("", {
+          data: {
+            microservice: payload.microservice,
+          },
+          headers,
+          responseType: "text",
+        });
+
+      const response = attempts > 1
+        ? await (await import("./retry.utils.js")).withRetry(exec, attempts, baseMs)
+        : await exec();
 
       if (!response.data) {
         throw new Error("Service-to-service token response was empty.");

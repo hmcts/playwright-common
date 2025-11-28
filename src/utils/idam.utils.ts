@@ -165,13 +165,21 @@ export class IdamUtils {
    */
   public async generateIdamToken(payload: IdamTokenParams): Promise<string> {
     try {
-      const response = await this.tokenClient.post<TokenResponse>("o/token", {
-        form: buildTokenForm(payload),
-        headers: {
-          "content-type": "application/x-www-form-urlencoded",
-        },
-        responseType: "json",
-      });
+      // Optional retry/backoff controlled via env vars
+      const attempts = Number(process.env.IDAM_RETRY_ATTEMPTS ?? 1);
+      const baseMs = Number(process.env.IDAM_RETRY_BASE_MS ?? 200);
+      const exec = async () =>
+        this.tokenClient.post<TokenResponse>("o/token", {
+          form: buildTokenForm(payload),
+          headers: {
+            "content-type": "application/x-www-form-urlencoded",
+          },
+          responseType: "json",
+        });
+
+      const response = attempts > 1
+        ? await (await import("./retry.utils.js")).withRetry(exec, attempts, baseMs)
+        : await exec();
 
       if (!response.data?.access_token) {
         throw new Error("Missing access token in response payload.");
