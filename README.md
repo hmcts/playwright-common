@@ -1,12 +1,13 @@
 # playwright-common
 
-This repository is a shared playwright package for use within HMCTS. The below list is available from this package:
+This is the shared Playwright toolkit for HMCTS projects. It ships reusable page objects, logging/telemetry, configs, and pragmatic helpers so teams can focus on writing tests—not plumbing.
 
-- **Shared Page Objects & Components**: Page objects and components commonly used across multiple HMCTS teams or services. This excludes those created and used exclusively within a single team or service.
-- **Configuration**: Configuration for playwright: common config, project config & linting
-- **Utilities**: Commonly used logic for interacting with HMCTS pages, API's or playwright.
-- **Observability Foundations**: A shared Winston logger, redaction helpers, and an instrumented API client that produce ready-to-attach Playwright artefacts.
-- **Coverage + Endpoint utilities**: Helpers to read c8 summaries, render table rows, and scan Playwright API specs for endpoint hit counts.
+What you get:
+- **Shared Page Objects & Components** for common HMCTS flows.
+- **Configuration**: common/playwright/linting configs.
+- **Utilities**: battle-tested helpers for API clients, waiting, validation, etc.
+- **Observability Foundations**: Winston-based logger, redaction, instrumented API client with ready-to-attach artefacts.
+- **Coverage + Endpoint utilities**: read c8 summaries, emit human-friendly text/rows, and scan Playwright API specs for endpoint hit counts.
 
 ## Contributing
 
@@ -107,22 +108,23 @@ const token = await utils.retrieveToken({
 > The HMCTS S2S gateway almost always expects both a microservice name and a matching secret. Allowing `S2S_SECRET` to be optional simply lets you fetch or compute the value at runtime. When no secret is provided the helper now logs `"No S2S secret provided; sending request without Authorization header."` and performs the request exactly as the pre‑1.0.37 version did—useful for legacy suites that never set a secret. Newer suites should continue to send a secret to avoid 401 responses.
 
 ### Coverage utilities
-
-Parse `coverage-summary.json` from c8/Istanbul and produce a text summary or table-ready rows:
+Parse `coverage-summary.json` from c8/Istanbul and produce text + table-ready rows you can inject into reports or publish as build artefacts.
 
 ```ts
 import { readCoverageSummary, buildCoverageRows } from "@hmcts/playwright-common";
 
 const summary = readCoverageSummary("./reports/tests/coverage/api-playwright/coverage-summary.json");
-if (summary) {
-  console.log(summary.textSummary); // plain-text block for artifacts
-  const rows = buildCoverageRows(summary.totals); // map to HTML/Markdown tables
+if (!summary) {
+  console.log("No coverage available");
+} else {
+  console.log(summary.textSummary);           // human-friendly block for a .txt artefact
+  const rows = buildCoverageRows(summary.totals); // normalised rows for HTML/Markdown tables
 }
 ```
 
 ### API endpoint scanner
 
-Count API client calls in your Playwright specs to show what endpoints are exercised:
+Count API client calls in your Playwright specs to show what endpoints are being exercised (great for dashboards and test gap hunting).
 
 ```ts
 import { scanApiEndpoints } from "@hmcts/playwright-common";
@@ -131,7 +133,7 @@ const { endpoints, totalHits } = scanApiEndpoints("./playwright_tests_new/api");
 // endpoints: sorted array of { endpoint, hits }, totalHits: total calls found
 ```
 
-You can override the pattern/extension if your client calls differ:
+If your client shape differs, override the pattern/extension:
 
 ```ts
 scanApiEndpoints("./tests/api", {
@@ -140,6 +142,16 @@ scanApiEndpoints("./tests/api", {
   extensions: [".js"],
 });
 ```
+
+### Suggested CI wiring
+
+- Run your coverage-enabled Playwright task (e.g. `c8 ... playwright test ...`) to produce `coverage-summary.json`.
+- Call `readCoverageSummary`/`buildCoverageRows` in a script to emit:
+  - `coverage-summary.txt` (attach/publish in CI)
+  - Optional JSON rows for injecting into HTML dashboards (Odhin/Playwright reports)
+- Use `scanApiEndpoints` against your API spec folder and publish the resulting JSON; it makes “tested endpoints” tabs trivial to render.
+
+Human-friendly goal: every pipeline run should tell people “what we covered” and “which APIs we hit” without spelunking artefacts.
 ```
 
 ### Logging & API Client
