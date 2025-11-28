@@ -3,6 +3,12 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0]
+
+- Added coverage utilities to parse `coverage-summary.json`, format human-readable summaries, and provide table-friendly rows.
+- Added API endpoint scanner utility to count Playwright API client calls per endpoint with configurable patterns/extensions.
+- Hardened `TableUtils` alignment to drop selection/action columns correctly; added unit coverage for table mapping, coverage, and endpoint scanning.
+
 ## [1.0.39]
 
 - Updated the table scraping function to allow for checkboxes that might occur on the right hand side of the table.

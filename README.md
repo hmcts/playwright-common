@@ -6,6 +6,7 @@ This repository is a shared playwright package for use within HMCTS. The below l
 - **Configuration**: Configuration for playwright: common config, project config & linting
 - **Utilities**: Commonly used logic for interacting with HMCTS pages, API's or playwright.
 - **Observability Foundations**: A shared Winston logger, redaction helpers, and an instrumented API client that produce ready-to-attach Playwright artefacts.
+- **Coverage + Endpoint utilities**: Helpers to read c8 summaries, render table rows, and scan Playwright API specs for endpoint hit counts.
 
 ## Contributing
 
@@ -104,6 +105,41 @@ const token = await utils.retrieveToken({
 
 > **Why does the helper still demand a secret?**  
 > The HMCTS S2S gateway almost always expects both a microservice name and a matching secret. Allowing `S2S_SECRET` to be optional simply lets you fetch or compute the value at runtime. When no secret is provided the helper now logs `"No S2S secret provided; sending request without Authorization header."` and performs the request exactly as the pre‑1.0.37 version did—useful for legacy suites that never set a secret. Newer suites should continue to send a secret to avoid 401 responses.
+
+### Coverage utilities
+
+Parse `coverage-summary.json` from c8/Istanbul and produce a text summary or table-ready rows:
+
+```ts
+import { readCoverageSummary, buildCoverageRows } from "@hmcts/playwright-common";
+
+const summary = readCoverageSummary("./reports/tests/coverage/api-playwright/coverage-summary.json");
+if (summary) {
+  console.log(summary.textSummary); // plain-text block for artifacts
+  const rows = buildCoverageRows(summary.totals); // map to HTML/Markdown tables
+}
+```
+
+### API endpoint scanner
+
+Count API client calls in your Playwright specs to show what endpoints are exercised:
+
+```ts
+import { scanApiEndpoints } from "@hmcts/playwright-common";
+
+const { endpoints, totalHits } = scanApiEndpoints("./playwright_tests_new/api");
+// endpoints: sorted array of { endpoint, hits }, totalHits: total calls found
+```
+
+You can override the pattern/extension if your client calls differ:
+
+```ts
+scanApiEndpoints("./tests/api", {
+  callPattern: /callApi\(["']([^"']+)["']\)/g,
+  endpointGroup: 1,
+  extensions: [".js"],
+});
+```
 ```
 
 ### Logging & API Client
