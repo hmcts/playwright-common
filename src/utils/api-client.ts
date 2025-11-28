@@ -269,10 +269,11 @@ export class ApiClient {
     const startTime = Date.now();
 
     type FetchOptions = Parameters<APIRequestContext["fetch"]>[1];
+    const effectiveTimeout = options?.timeoutMs ?? 30_000;
     let requestOptions: FetchOptions = {
       method,
       headers: requestHeaders,
-      timeout: options?.timeoutMs ?? 30000,
+      timeout: effectiveTimeout,
     };
     const builtParams = this.buildParams(options?.query);
     if (builtParams !== undefined) {

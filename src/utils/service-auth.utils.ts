@@ -31,7 +31,7 @@ export class ServiceAuthUtils {
   private readonly client: ApiClient;
 
   constructor(options?: ServiceAuthUtilsOptions) {
-    this.serviceAuthUrl = process.env.S2S_URL ?? "";
+    this.serviceAuthUrl = process.env["S2S_URL"] ?? "";
     this.serviceAuthSecret =
       options?.secret ?? process.env.S2S_SECRET ?? undefined;
 
@@ -74,7 +74,7 @@ export class ServiceAuthUtils {
       };
 
       if (secret) {
-        headers.Authorization = ServiceAuthUtils.buildBasicAuthHeader(
+        headers["Authorization"] = ServiceAuthUtils.buildBasicAuthHeader(
           payload.microservice,
           secret
         );
