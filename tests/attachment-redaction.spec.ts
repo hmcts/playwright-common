@@ -1,9 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { buildApiAttachment } from "../src/utils/api-client";
-import { REDACTED_VALUE, buildRedactionState, sanitiseHeaders } from "../src/logging/redaction";
+import { buildApiAttachment, type ApiLogEntry } from "../src/utils/api-client";
 
 // Minimal log entry shape to test attachment building
-const sampleEntry = {
+const sampleEntry: ApiLogEntry = {
   id: "1",
   name: "api-client",
   method: "GET",
@@ -31,7 +30,7 @@ const sampleEntry = {
     form: undefined,
   },
   rawResponse: "{\"token\":\"xyz\"}"
-} as any;
+};
 
 describe("buildApiAttachment redaction", () => {
   it("excludes raw bodies when includeRaw=false", () => {
