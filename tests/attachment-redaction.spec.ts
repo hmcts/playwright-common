@@ -41,7 +41,10 @@ describe("buildApiAttachment redaction", () => {
   });
 
   it("includes raw bodies when includeRaw=true", () => {
+    const prevDebug = process.env.PLAYWRIGHT_DEBUG_API;
+    process.env.PLAYWRIGHT_DEBUG_API = "true";
     const attachment = buildApiAttachment(sampleEntry, { includeRaw: true });
+    process.env.PLAYWRIGHT_DEBUG_API = prevDebug;
     const parsed = JSON.parse(attachment.body);
     expect(parsed.rawRequest).toBeDefined();
     expect(parsed.rawResponse).toBeDefined();

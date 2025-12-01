@@ -586,12 +586,23 @@ export function buildApiAttachment(
   entry: ApiLogEntry,
   options?: ApiAttachmentOptions
 ): { name: string; body: string; contentType: string } {
-  const includeRaw = options?.includeRaw ?? false;
+  const includeRawRequested = options?.includeRaw ?? false;
+  const allowRawBodies =
+    includeRawRequested &&
+    (process.env.PLAYWRIGHT_DEBUG_API === "true" ||
+      process.env.PLAYWRIGHT_DEBUG_API === "1" ||
+      process.env.NODE_ENV === "development");
+  const includeRaw = includeRawRequested && allowRawBodies;
   const payload = {
     ...entry,
     rawRequest: includeRaw ? entry.rawRequest : undefined,
     rawResponse: includeRaw ? entry.rawResponse : undefined,
   };
+
+  if (includeRawRequested && !includeRaw) {
+    // Fail-closed: strip raw bodies unless explicitly enabled for local debugging
+    // No console logging here due to lint; consumers can inspect attachment payload to see raw missing.
+  }
 
   return {
     name: `api-${entry.method.toLowerCase()}-${entry.status}.json`,

@@ -9,7 +9,7 @@ What you get:
 - **Shared Page Objects & Components** for common HMCTS flows.
 - **Configuration**: common/playwright/linting configs.
 - **Utilities**: battle-tested helpers for API clients, waiting, validation, etc.
-- **Observability Foundations**: Winston-based logger, redaction, instrumented API client with ready-to-attach artefacts.
+- **Observability Foundations**: Winston-based logger, redaction, instrumented API client with ready-to-attach artefacts (fail-closed on raw bodies unless `PLAYWRIGHT_DEBUG_API` is explicitly enabled).
 - **Coverage + Endpoint utilities**: read c8 summaries, emit human-friendly text/rows, and scan Playwright API specs for endpoint hit counts.
 
 ## Contributing
@@ -57,6 +57,71 @@ Default redaction coverage (headers/fields masked automatically):
 - `session`
 
 You can extend/override patterns via `redaction.patterns` or `redactKeys` when creating the logger or API client.
+
+## ApiClient guide (human-friendly)
+
+The `ApiClient` wraps Playwright’s `APIRequestContext` with:
+- Redacted structured logging (Winston).
+- Correlation IDs on every call (auto-generated if not supplied).
+- Optional circuit breaker to stop hammering failing dependencies.
+- Retry-friendly errors (carry `retryAfterMs`, `elapsedMs`, `endpointPath`, `correlationId`).
+- Attachment builder for test artefacts.
+- Fail-closed raw bodies: only included when `PLAYWRIGHT_DEBUG_API` is `true`/`1` or `NODE_ENV=development`.
+
+Example:
+```ts
+import { ApiClient, buildApiAttachment, isRetryableError, withRetry } from "@hmcts/playwright-common";
+
+const api = new ApiClient({
+  baseUrl: process.env.BACKEND_BASE_URL,
+  name: "backend",
+  circuitBreaker: { enabled: true, options: { failureThreshold: 5, cooldownMs: 30000 } },
+  captureRawBodies: false, // safe default for CI
+  onError: (err) => {
+    // centralised telemetry hook
+    console.error("api error", { status: err.status, retryAfterMs: err.retryAfterMs, correlationId: err.correlationId });
+  },
+});
+
+const res = await withRetry(
+  () => api.get("/health", { throwOnError: true }),
+  3,
+  200,
+  2000,
+  15000,
+  isRetryableError
+);
+```
+
+Attachment safety:
+```ts
+const entry = /* ApiLogEntry */;
+const attachment = buildApiAttachment(entry, { includeRaw: true }); // raw only when debug env is on
+```
+
+Default timeout: 30s per request (override via `timeoutMs` per call).
+
+## Env vars at a glance
+- Logging: `LOG_LEVEL`, `LOG_FORMAT`, `LOG_REDACTION`, `LOG_SERVICE_NAME`
+- Debug API bodies: `PLAYWRIGHT_DEBUG_API` (`true`/`1` to allow raw payloads in attachments)
+- IDAM: `IDAM_WEB_URL`, `IDAM_TESTING_SUPPORT_URL`, optional `IDAM_RETRY_ATTEMPTS`, `IDAM_RETRY_BASE_MS`
+- S2S: `S2S_URL`, `S2S_SECRET`, optional `S2S_RETRY_ATTEMPTS`, `S2S_RETRY_BASE_MS`
+- Playwright workers: `FUNCTIONAL_TESTS_WORKERS`
+- PW debug: `PWDEBUG` (`true`/`1` to emit extra Axe logging)
+
+## Troubleshooting & FAQ
+- **Breaker open / repeated 5xx**: enable circuit breaker + retry; respect `retryAfterMs` when present.
+- **Missing raw bodies in attachments**: expected in CI. Set `PLAYWRIGHT_DEBUG_API=true` locally if you need raw payloads; keep `includeRaw=false` in pipelines.
+- **Endpoint scanner misses dynamic paths**: pass `useAst:true` and avoid heavily dynamic template strings; regex fallback is simpler but less precise.
+- **Timeouts**: default 30s; set `timeoutMs` per call for stricter budgets.
+- **Redaction**: extend `redaction.patterns` or `loggerOptions.redactKeys` if you see sensitive fields; raw bodies gated behind debug reduce leakage risk.
+
+## CI/publishing notes
+- `prepack` runs `yarn build` before publish.
+- Publish/archive human-friendly artefacts:
+  - `coverage/coverage-summary.txt` and `coverage/coverage-summary-rows.json`
+  - `coverage/api-endpoints.json`
+  - Use Odhin/Playwright tabs to render coverage/endpoint rows.
 
 #### IdamUtils Requirements
 To use the `IdamUtils` class, you must configure the following environment variables in your repository:
@@ -319,6 +384,7 @@ scanApiEndpoints("./tests/api", {
   - `coverage-summary.txt` (attach/publish in CI)
   - Optional JSON rows for injecting into HTML dashboards (Odhin/Playwright reports)
 - Use `scanApiEndpoints` against your API spec folder and publish the resulting JSON; it makes “tested endpoints” tabs trivial to render.
+- Attach API calls safely: `buildApiAttachment` will only include raw bodies when `PLAYWRIGHT_DEBUG_API` is true/1 or `NODE_ENV=development` (fail-closed for CI). Leave `includeRaw=false` for pipeline artefacts.
 
 Human-friendly goal: every pipeline run should tell people “what we covered” and “which APIs we hit” without spelunking artefacts.
 ```

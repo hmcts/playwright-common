@@ -3,6 +3,13 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.41]
+
+- ApiClient hardening: default timeout, richer ApiClientError metadata (correlationId/retryAfter/body preview), fetch error wrapping, Retry-After-aware backoff, redaction fail-closed attachments (raw only when debug is explicit).
+- Retry helper now honours `retryAfterMs` on errors when scheduling backoff.
+- Added human-friendly recipes (coverage/endpoint scripting, attachment safety, fixture wiring) and a 429-aware retry example.
+- prepack builds before publish for safer releases.
+
 ## [1.0.40]
 
 - Added coverage utilities to parse `coverage-summary.json`, format human-readable summaries, and provide table-friendly rows.

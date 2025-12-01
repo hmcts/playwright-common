@@ -50,7 +50,8 @@
     "build": "rm -rf dist && yarn tsc -p tsconfig.json",
     "build:package": "yarn build && yarn pack",
     "lint": "yarn eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "yarn build"
   },
   "prepack": "yarn build",
   "bin": {

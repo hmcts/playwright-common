@@ -45,11 +45,24 @@ export async function withRetry<T>(
       const elapsed = Date.now() - start;
       if (elapsed >= maxElapsedMs) break;
       const jitter = Math.random() * 50;
-      const delay = Math.min(baseMs * Math.pow(2, i) + jitter, maxMs);
-      await new Promise((r) => setTimeout(r, delay));
+      const backoff = Math.min(baseMs * Math.pow(2, i) + jitter, maxMs);
+      const retryAfter = parseRetryAfterMs(e);
+      const delay = Math.max(backoff, retryAfter ?? 0);
+      const remaining = maxElapsedMs - elapsed;
+      if (remaining <= 0) break;
+      await new Promise((r) => setTimeout(r, Math.min(delay, remaining)));
     }
   }
   throw lastError instanceof Error
     ? lastError
     : new Error(`Retry failed: ${String(lastError)}`);
+}
+
+function parseRetryAfterMs(error: unknown): number | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const retryAfterMs = (error as { retryAfterMs?: unknown }).retryAfterMs;
+  if (typeof retryAfterMs === "number" && retryAfterMs > 0) {
+    return retryAfterMs;
+  }
+  return undefined;
 }
