@@ -19,7 +19,8 @@ export class LighthouseUtils {
 
   public async audit(thresholds?: Thresholds): Promise<void> {
     await playAudit({
-      page: this.lighthousePage,
+      // Cast to playwright-core Page to align with lighthouse types
+      page: this.lighthousePage as unknown as import("playwright-core").Page,
       thresholds: thresholds ?? LighthouseUtils.DEFAULT_THRESHOLDS,
       port: this.lighthousePort,
       config: desktopConfig,

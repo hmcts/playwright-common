@@ -59,7 +59,10 @@ export class AxeUtils {
    */
   public async audit(options?: AuditOptions): Promise<void> {
     const start = Date.now();
-    const builder = new AxeBuilder({ page: this.page }).withTags(
+    const builder = new AxeBuilder({
+      // Cast to playwright-core Page to satisfy upstream type expectations from axe
+      page: this.page as unknown as import("playwright-core").Page,
+    }).withTags(
       AxeUtils.DEFAULT_TAGS
     );
     this.applySelectors(builder, "exclude", options?.exclude);

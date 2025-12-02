@@ -7,6 +7,7 @@ import {
 } from "./api-client.js";
 import { createChildLogger, createLogger } from "../logging/logger.js";
 import { serialiseApiBody } from "./error.utils.js";
+import { withRetry, isRetryableError } from "./retry.utils.js";
 
 interface UserBase {
   email: string;
@@ -113,8 +114,8 @@ export class IdamUtils {
   private readonly testingSupportClient: ApiClient;
 
   constructor(options?: IdamUtilsOptions) {
-    this.idamWebUrl = process.env.IDAM_WEB_URL ?? "";
-    this.idamTestingSupportUrl = process.env.IDAM_TESTING_SUPPORT_URL ?? "";
+    this.idamWebUrl = process.env["IDAM_WEB_URL"] ?? "";
+    this.idamTestingSupportUrl = process.env["IDAM_TESTING_SUPPORT_URL"] ?? "";
 
     if (!this.idamWebUrl || !this.idamTestingSupportUrl) {
       throw new Error(
@@ -132,17 +133,21 @@ export class IdamUtils {
       baseUrl: string,
       name: string,
       providedClient?: ApiClient
-    ): ApiClient =>
-      providedClient ??
-      new ApiClient({
+    ): ApiClient => {
+      if (providedClient) return providedClient;
+      const clientOptions: ApiClientOptions = {
         baseUrl,
         name,
         logger: createChildLogger(this.logger, { client: name }),
-        correlationId: options?.correlationId,
-        redaction: options?.apiClientOptions?.redaction,
-        captureRawBodies: options?.apiClientOptions?.captureRawBodies,
-        onResponse: options?.apiClientOptions?.onResponse,
-      });
+      };
+      if (options?.correlationId) clientOptions.correlationId = options.correlationId;
+      const apiOpts = options?.apiClientOptions;
+      if (apiOpts?.redaction) clientOptions.redaction = apiOpts.redaction;
+      if (apiOpts?.captureRawBodies !== undefined)
+        clientOptions.captureRawBodies = apiOpts.captureRawBodies;
+      if (apiOpts?.onResponse) clientOptions.onResponse = apiOpts.onResponse;
+      return new ApiClient(clientOptions);
+    };
 
     this.tokenClient = buildClient(
       this.idamWebUrl,
@@ -165,13 +170,21 @@ export class IdamUtils {
    */
   public async generateIdamToken(payload: IdamTokenParams): Promise<string> {
     try {
-      const response = await this.tokenClient.post<TokenResponse>("o/token", {
-        form: buildTokenForm(payload),
-        headers: {
-          "content-type": "application/x-www-form-urlencoded",
-        },
-        responseType: "json",
-      });
+      // Optional retry/backoff controlled via env vars
+      const attempts = Number(process.env["IDAM_RETRY_ATTEMPTS"] ?? 1);
+      const baseMs = Number(process.env["IDAM_RETRY_BASE_MS"] ?? 200);
+      const exec = async () =>
+        this.tokenClient.post<TokenResponse>("o/token", {
+          form: buildTokenForm(payload),
+          headers: {
+            "content-type": "application/x-www-form-urlencoded",
+          },
+          responseType: "json",
+        });
+
+      const response = attempts > 1
+        ? await withRetry(exec, attempts, baseMs, 2000, 15000, isRetryableError)
+        : await exec();
 
       if (!response.data?.access_token) {
         throw new Error("Missing access token in response payload.");
@@ -326,10 +339,9 @@ export class IdamUtils {
         }
       );
 
-      return {
+      const updated: UpdatedUser = {
         id: response.data?.id ?? payload.id,
         email: response.data?.email ?? payload.user.email,
-        password: response.data?.password,
         forename: response.data?.forename ?? payload.user.forename,
         surname: response.data?.surname ?? payload.user.surname,
         displayName:
@@ -339,6 +351,10 @@ export class IdamUtils {
         accountStatus: response.data?.accountStatus ?? "ACTIVE",
         recordType: response.data?.recordType ?? "LIVE",
       };
+      if (response.data?.password) {
+        updated.password = response.data.password;
+      }
+      return updated;
     } catch (error) {
       throw this.handleApiError(
         error,
@@ -396,13 +412,13 @@ function buildTokenForm({
     scope,
   };
   if (username) {
-    form.username = username;
+    form["username"] = username;
   }
   if (password) {
-    form.password = password;
+    form["password"] = password;
   }
   if (redirectUri) {
-    form.redirect_uri = redirectUri;
+    form["redirect_uri"] = redirectUri;
   }
   return form;
 }

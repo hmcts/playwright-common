@@ -44,10 +44,11 @@ export class ExuiCaseDetailsComponent {
       throw new Error("Case header text not found");
     }
     const match = ExuiCaseDetailsComponent.CASE_NUMBER_REGEX.exec(text);
-    if (!match) {
+    const group = match?.[1];
+    if (!group) {
       throw new Error("Case number not found in header");
     }
-    return match[1].trim();
+    return group.trim();
   }
 
   /**

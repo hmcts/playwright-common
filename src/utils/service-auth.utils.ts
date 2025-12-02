@@ -6,6 +6,7 @@ import {
 } from "./api-client.js";
 import { createChildLogger, createLogger } from "../logging/logger.js";
 import { serialiseApiBody } from "./error.utils.js";
+import { withRetry, isRetryableError } from "./retry.utils.js";
 
 export interface ServiceTokenParams {
   microservice: string;
@@ -25,12 +26,12 @@ export interface ServiceAuthUtilsOptions {
 
 export class ServiceAuthUtils {
   private readonly serviceAuthUrl: string;
-  private readonly serviceAuthSecret?: string;
+  private readonly serviceAuthSecret: string | undefined;
   private readonly logger: Logger;
   private readonly client: ApiClient;
 
   constructor(options?: ServiceAuthUtilsOptions) {
-    this.serviceAuthUrl = process.env.S2S_URL ?? "";
+    this.serviceAuthUrl = process.env["S2S_URL"] ?? "";
     this.serviceAuthSecret =
       options?.secret ?? process.env.S2S_SECRET ?? undefined;
 
@@ -45,15 +46,19 @@ export class ServiceAuthUtils {
 
     this.client =
       options?.client ??
-      new ApiClient({
-        baseUrl: this.serviceAuthUrl,
-        name: "service-auth",
-        logger: createChildLogger(this.logger, { client: "service-auth" }),
-        correlationId: options?.correlationId,
-        redaction: options?.apiClientOptions?.redaction,
-        captureRawBodies: options?.apiClientOptions?.captureRawBodies,
-        onResponse: options?.apiClientOptions?.onResponse,
-      });
+      (() => {
+        const clientOptions: ApiClientOptions = {
+          baseUrl: this.serviceAuthUrl,
+          name: "service-auth",
+          logger: createChildLogger(this.logger, { client: "service-auth" }),
+        };
+        if (options?.correlationId) clientOptions.correlationId = options.correlationId;
+        const apiOpts = options?.apiClientOptions;
+        if (apiOpts?.redaction) clientOptions.redaction = apiOpts.redaction;
+        if (apiOpts?.captureRawBodies !== undefined) clientOptions.captureRawBodies = apiOpts.captureRawBodies;
+        if (apiOpts?.onResponse) clientOptions.onResponse = apiOpts.onResponse;
+        return new ApiClient(clientOptions);
+      })();
   }
   /**
    * Retrieves a Service Auth token.
@@ -69,7 +74,7 @@ export class ServiceAuthUtils {
       };
 
       if (secret) {
-        headers.Authorization = ServiceAuthUtils.buildBasicAuthHeader(
+        headers["Authorization"] = ServiceAuthUtils.buildBasicAuthHeader(
           payload.microservice,
           secret
         );
@@ -82,13 +87,21 @@ export class ServiceAuthUtils {
         );
       }
 
-      const response = await this.client.post<string>("", {
-        data: {
-          microservice: payload.microservice,
-        },
-        headers,
-        responseType: "text",
-      });
+      // Optional retry/backoff controlled via env vars
+      const attempts = Number(process.env.S2S_RETRY_ATTEMPTS ?? 1);
+      const baseMs = Number(process.env.S2S_RETRY_BASE_MS ?? 200);
+      const exec = async () =>
+        this.client.post<string>("", {
+          data: {
+            microservice: payload.microservice,
+          },
+          headers,
+          responseType: "text",
+        });
+
+      const response = attempts > 1
+        ? await withRetry(exec, attempts, baseMs, 2000, 15000, isRetryableError)
+        : await exec();
 
       if (!response.data) {
         throw new Error("Service-to-service token response was empty.");
