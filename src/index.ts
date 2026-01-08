@@ -35,7 +35,15 @@ export {
   formatEndpointHitsMarkdown,
 } from "./utils/api-endpoints.utils.js";
 export { ServiceAuthUtils } from "./utils/service-auth.utils.js";
-export { withRetry } from "./utils/retry.utils.js";
+export {
+  withRetry,
+  isRetryableError,
+  DEFAULT_RETRY_ATTEMPTS,
+  DEFAULT_RETRY_BASE_MS,
+  DEFAULT_RETRY_MAX_MS,
+  DEFAULT_RETRY_MAX_ELAPSED_MS,
+  type RetryCondition,
+} from "./utils/retry.utils.js";
 export {
   createLogger,
   createChildLogger,

@@ -12,10 +12,14 @@ export function serialiseApiBody(body: unknown): string {
   } catch {
     // Last resort: attempt to build key=value pairs if possible
     if (typeof body === "object") {
-      return Object.entries(body as Record<string, unknown>)
-        .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`)
-        .join(", ");
+      try {
+        return Object.entries(body as Record<string, unknown>)
+          .map(([k, v]) => `${k}=${String(v)}`)
+          .join(", ");
+      } catch {
+        return String(body);
+      }
     }
-    return typeof body === "string" ? body : JSON.stringify(body);
+    return String(body);
   }
 }

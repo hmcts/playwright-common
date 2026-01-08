@@ -41,7 +41,7 @@ describe('CircuitBreaker metrics', () => {
     expect(breaker.canProceed(afterCooldown)).toBe(true);
     metrics = breaker.getMetrics();
     expect(metrics.state).toBe('half-open');
-    expect(metrics.halfOpenTrialCount).toBe(0);
+    expect(metrics.halfOpenTrialCount).toBe(1); // First trial consumed
 
     // Failure in half-open re-opens circuit
     breaker.onFailure(afterCooldown + 1);

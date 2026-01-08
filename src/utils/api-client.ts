@@ -175,6 +175,25 @@ export class ApiClient {
     const debugBodies =
       process.env.PLAYWRIGHT_DEBUG_API === "1" ||
       process.env.PLAYWRIGHT_DEBUG_API?.toLowerCase() === "true";
+    
+    // Warn if debug mode is enabled in production or CI
+    if (debugBodies) {
+      const env = process.env.NODE_ENV || "development";
+      const isCI = process.env.CI === "true" || process.env.CI === "1";
+      
+      if (env === "production" || isCI) {
+        this.logger.warn(
+          `PLAYWRIGHT_DEBUG_API is enabled in ${isCI ? "CI" : env} environment. ` +
+          "Raw request/response bodies will be logged, which may expose sensitive data. " +
+          "Disable PLAYWRIGHT_DEBUG_API in CI/production environments."
+        );
+      } else {
+        this.logger.info(
+          "PLAYWRIGHT_DEBUG_API is enabled - raw request/response bodies will be captured for debugging"
+        );
+      }
+    }
+    
     this.captureRawBodies = options?.captureRawBodies ?? debugBodies;
     this.globalCorrelationId = options?.correlationId;
     this.onResponse = options?.onResponse;

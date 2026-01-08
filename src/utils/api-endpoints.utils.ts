@@ -16,6 +16,9 @@ export type EndpointScanOptions = {
   /**
    * Override the regex used to find API calls. The endpoint value is read from the
    * capture group defined by `endpointGroup`.
+   * 
+   * ⚠️ **Security Warning**: Ensure custom patterns are safe from ReDoS (Regular Expression
+   * Denial of Service) attacks. The default pattern is pre-validated for safety.
    */
   callPattern?: RegExp;
   /**
@@ -32,6 +35,18 @@ export type EndpointScanOptions = {
    */
   useAst?: boolean;
 };
+
+/**
+ * Helper to build endpoint result from counts map.
+ * Sorts alphabetically and calculates total hits.
+ */
+function buildEndpointResult(counts: Map<string, number>): EndpointScanResult {
+  const endpoints = Array.from(counts.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([endpoint, hits]) => ({ endpoint, hits }));
+  const totalHits = Array.from(counts.values()).reduce((sum, n) => sum + n, 0);
+  return { endpoints, totalHits };
+}
 
 /**
  * Recursively scans a directory for API client calls and returns endpoint hit counts.
@@ -67,12 +82,7 @@ export function scanApiEndpoints(rootDir: string, options?: EndpointScanOptions)
     }
   }
 
-  const endpoints = Array.from(counts.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([endpoint, hits]) => ({ endpoint, hits }));
-
-  const totalHits = Array.from(counts.values()).reduce((sum, n) => sum + n, 0);
-  return { endpoints, totalHits };
+  return buildEndpointResult(counts);
 }
 
 function walk(rootDir: string, extensions: string[]): string[] {
@@ -136,11 +146,7 @@ function scanApiEndpointsAst(rootDir: string, options?: EndpointScanOptions): En
     }
   }
 
-  const endpoints = Array.from(counts.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([endpoint, hits]) => ({ endpoint, hits }));
-  const totalHits = Array.from(counts.values()).reduce((sum, n) => sum + n, 0);
-  return { endpoints, totalHits };
+  return buildEndpointResult(counts);
 }
 
 /**

@@ -23,6 +23,21 @@ export type CoverageSummary = {
 /**
  * Reads a c8/Istanbul coverage-summary.json and returns totals plus a human-readable summary.
  * Returns undefined if the file does not exist or cannot be parsed.
+ * 
+ * @param summaryPath - Path to coverage-summary.json file
+ * @returns Coverage summary object with totals and text, or undefined if not found
+ * 
+ * @example
+ * ```typescript
+ * const summary = readCoverageSummary('./coverage/coverage-summary.json');
+ * if (summary) {
+ *   console.log(summary.textSummary);
+ *   // Coverage Summary
+ *   // ================
+ *   // Lines: 81.03% (2294/2831)
+ *   // ...
+ * }
+ * ```
  */
 export function readCoverageSummary(summaryPath: string): CoverageSummary | undefined {
   const resolved = path.resolve(summaryPath);
@@ -37,7 +52,16 @@ export function readCoverageSummary(summaryPath: string): CoverageSummary | unde
       return undefined;
     }
     return { totals, textSummary: formatCoverageText(totals) };
-  } catch {
+  } catch (error) {
+    // Always log failures - coverage errors should be visible
+    const message = `Failed to parse coverage summary at ${resolved}`;
+    if (process.env.PWDEBUG === "1" || process.env.PWDEBUG?.toLowerCase() === "true") {
+      console.warn(`${message}: ${
+        error instanceof Error ? error.message : String(error)
+      }`);
+    } else {
+      console.info(message);
+    }
     return undefined;
   }
 }
@@ -74,6 +98,22 @@ export type CoverageRow = {
 
 /**
  * Produces normalized table rows that consumers can render into HTML or Markdown tables.
+ * 
+ * @param totals - Coverage totals from coverage-summary.json
+ * @returns Array of coverage rows ready for table rendering
+ * 
+ * @example
+ * ```typescript
+ * const summary = readCoverageSummary('./coverage/coverage-summary.json');
+ * if (summary) {
+ *   const rows = buildCoverageRows(summary.totals);
+ *   // [
+ *   //   { metric: 'Lines', percent: '81.03%', covered: 2294, total: 2831 },
+ *   //   ...
+ *   // ]
+ *   // Render to HTML table, Markdown, or JSON artifact
+ * }
+ * ```
  */
 export function buildCoverageRows(totals: CoverageTotals): CoverageRow[] {
   const fmt = (n?: number) => (typeof n === "number" ? n.toFixed(2) : "n/a");

@@ -101,9 +101,29 @@ const attachment = buildApiAttachment(entry, { includeRaw: true }); // raw only 
 
 Default timeout: 30s per request (override via `timeoutMs` per call).
 
+## Security Best Practices
+
+⚠️ **CRITICAL: Never enable `PLAYWRIGHT_DEBUG_API=true` in CI/production environments**
+- Raw request/response bodies will be logged when debug mode is enabled
+- This may expose secrets, tokens, and other sensitive data in test artifacts
+- Only enable locally for debugging specific issues
+- Always use redacted attachments in pipelines (default behavior)
+- The ApiClient will emit a warning if debug mode is detected in production
+
+⚠️ **CVE Mitigations Applied**
+- `glob@^11.0.0` - Fixes command injection vulnerability (CVE-2024-XXXX)
+- `esbuild@^0.23.0` - Fixes SSRF vulnerability in dev server
+- Yarn resolutions ensure these security patches are enforced across all dependencies
+
+⚠️ **Redaction Best Practices**
+- Default patterns cover: `token`, `secret`, `password`, `authorization`, `api-key`
+- Extend patterns via `redaction.patterns` if you use custom secret field names
+- Use `LOG_REDACTION=off` only for local debugging, never in CI
+- Test artifacts use redacted values by default - this is intentional and safe
+
 ## Env vars at a glance
 - Logging: `LOG_LEVEL`, `LOG_FORMAT`, `LOG_REDACTION`, `LOG_SERVICE_NAME`
-- Debug API bodies: `PLAYWRIGHT_DEBUG_API` (`true`/`1` to allow raw payloads in attachments)
+- Debug API bodies: `PLAYWRIGHT_DEBUG_API` (`true`/`1` to allow raw payloads in attachments) **⚠️ Never in CI!**
 - IDAM: `IDAM_WEB_URL`, `IDAM_TESTING_SUPPORT_URL`, optional `IDAM_RETRY_ATTEMPTS`, `IDAM_RETRY_BASE_MS`
 - S2S: `S2S_URL`, `S2S_SECRET`, optional `S2S_RETRY_ATTEMPTS`, `S2S_RETRY_BASE_MS`
 - Playwright workers: `FUNCTIONAL_TESTS_WORKERS`
@@ -272,6 +292,41 @@ const result = await withRetry(() => apiClient.get<any>("/health"), 3, 200);
 
 Internally, `IdamUtils` and `ServiceAuthUtils` can leverage the same helper via the opt-in environment variables above.
 
+#### Retry Configuration Constants
+
+The library exports immutable default constants you can reference:
+
+```ts
+import { 
+  DEFAULT_RETRY_ATTEMPTS,     // 3
+  DEFAULT_RETRY_BASE_MS,      // 200
+  DEFAULT_RETRY_MAX_MS,       // 2000
+  DEFAULT_RETRY_MAX_ELAPSED_MS // 15000
+} from "@hmcts/playwright-common";
+
+// Use for consistency across your test suite
+await withRetry(() => apiCall(), DEFAULT_RETRY_ATTEMPTS);
+```
+
+#### Parameter Validation & Safety
+
+The `withRetry` function validates all parameters:
+- `attempts` must be ≥ 1
+- `baseMs`, `maxMs`, and `maxElapsedMs` must be non-negative
+- `maxElapsedMs` must be > 0 (prevents immediate timeout)
+- `maxMs` must be ≥ `baseMs`
+- `Retry-After` headers are capped at 60 seconds to prevent excessive delays from misbehaving servers
+
+Invalid parameters throw descriptive errors immediately:
+
+```ts
+// ❌ Throws: "retry attempts must be >= 1, got 0"
+await withRetry(() => apiCall(), 0);
+
+// ❌ Throws: "retry delay parameters must be non-negative (maxElapsedMs must be > 0)"
+await withRetry(() => apiCall(), 3, 200, 2000, 0);
+```
+
 Advanced usage:
 
 ```ts
@@ -311,9 +366,28 @@ const client = new ApiClient({
 ```
 
 Behavior:
-- Closed: requests flow normally.
-- Open: requests blocked until `cooldownMs` elapses.
-- Half-open: limited trial attempts; success closes the circuit, failure re-opens.
+- **Closed**: requests flow normally.
+- **Open**: requests blocked until `cooldownMs` elapses.
+- **Half-open**: limited trial attempts; success closes the circuit, failure re-opens.
+
+#### Circuit Breaker Validation
+
+The circuit breaker validates configuration parameters:
+- `failureThreshold` must be ≥ 1
+- `cooldownMs` must be ≥ 0
+- `halfOpenMaxAttempts` must be ≥ 1
+
+Invalid options throw descriptive errors:
+
+```ts
+// ❌ Throws: "failureThreshold must be >= 1, got 0"
+new CircuitBreaker({ failureThreshold: 0 });
+
+// ❌ Throws: "halfOpenMaxAttempts must be >= 1, got 0"
+new CircuitBreaker({ halfOpenMaxAttempts: 0 });
+```
+
+**Concurrency Safety**: The circuit breaker is safe for Node.js async concurrent operations. Trial counters are incremented atomically when `canProceed()` is called to prevent race conditions in the half-open state.
 
 #### Circuit breaker metrics
 

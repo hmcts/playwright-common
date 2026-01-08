@@ -59,6 +59,18 @@ export function shouldRedactKey(
   return state.patterns.some((pattern) => pattern.test(key));
 }
 
+/**
+ * Recursively sanitize a value by redacting sensitive fields and string patterns.
+ * 
+ * Note: The returned value maintains the same structure as the input, but with
+ * sensitive data replaced with [REDACTED]. The type cast to T is safe because
+ * the structure is preserved, only values are changed.
+ * 
+ * @param value - Value to sanitize
+ * @param state - Redaction state with enabled flag and patterns
+ * @param key - Optional key name for determining if the value itself should be redacted
+ * @returns Sanitized value with same structure as input
+ */
 export function sanitiseValue<T>(
   value: T,
   state: RedactionState,
