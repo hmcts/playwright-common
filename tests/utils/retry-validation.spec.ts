@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { withRetry, DEFAULT_RETRY_ATTEMPTS } from "../../src/utils/retry.utils";
+import { withRetry } from "../../src/utils/retry.utils";
 
 describe("withRetry parameter validation", () => {
   it("throws error when attempts < 1", async () => {

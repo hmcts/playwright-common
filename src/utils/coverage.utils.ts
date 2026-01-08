@@ -60,7 +60,7 @@ export function readCoverageSummary(summaryPath: string): CoverageSummary | unde
         error instanceof Error ? error.message : String(error)
       }`);
     } else {
-      console.info(message);
+      console.warn(message);
     }
     return undefined;
   }
