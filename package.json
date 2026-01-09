@@ -1,7 +1,7 @@
 {
   "name": "@hmcts/playwright-common",
   "description": "Common library for Playwright tests",
-  "version": "1.0.40-EXUI-3784-rc.0",
+  "version": "1.0.40-EXUI-3784-PRE-RELEASE-rc.0",
   "author": "HMCTS",
   "license": "MIT",
   "repository": {
