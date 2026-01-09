@@ -30,9 +30,11 @@ jobs:
 
       - name: Publish pre-release
         # run: yarn npm publish --tag ${{ steps.version.outputs.version }} --access public
-        run: npm publish --tag ${{ steps.version.outputs.version }} --access public --registry https://registry.npmjs.org/
+        run: npm publish --tag rc --access public --registry https://registry.npmjs.org/
         env:
-          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_API_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_API_TOKEN }}
+        # env:
+        #   YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_API_TOKEN }}
 
       - name: Comment PR with published version
         env:
