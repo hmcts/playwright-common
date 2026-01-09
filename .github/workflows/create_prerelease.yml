@@ -29,7 +29,8 @@ jobs:
         run: echo "version=$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version)")" >> "$GITHUB_OUTPUT"
 
       - name: Publish pre-release
-        run: yarn npm publish --tag ${{ steps.version.outputs.version }} --access public
+        # run: yarn npm publish --tag ${{ steps.version.outputs.version }} --access public
+        run: npm publish --tag ${{ steps.version.outputs.version }} --access public --registry https://registry.npmjs.org/
         env:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_API_TOKEN }}
 
