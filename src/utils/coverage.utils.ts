@@ -21,7 +21,7 @@ export type CoverageSummary = {
 };
 
 /**
- * Reads a c8/Istanbul coverage-summary.json and returns totals plus a human-readable summary.
+ * Reads a c8/Istanbul coverage-summary.json and returns totals plus a readable summary.
  * Returns undefined if the file does not exist or cannot be parsed.
  * 
  * @param summaryPath - Path to coverage-summary.json file
@@ -67,7 +67,7 @@ export function readCoverageSummary(summaryPath: string): CoverageSummary | unde
 }
 
 /**
- * Formats coverage totals into a short, human-readable block suitable for plain-text artifacts.
+ * Formats coverage totals into a short, readable block suitable for plain-text artifacts.
  */
 export function formatCoverageText(totals: CoverageTotals): string {
   const fmt = (n?: number) => (typeof n === "number" ? n.toFixed(2) : "n/a");

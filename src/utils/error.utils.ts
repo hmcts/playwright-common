@@ -1,5 +1,5 @@
 /**
- * Serialize an API response body into a human-readable string for error messages.
+ * Serialize an API response body into a readable string for error messages.
  * Strings are returned as-is; objects are JSON stringified; undefined/null produce a placeholder.
  */
 export function serialiseApiBody(body: unknown): string {
@@ -12,14 +12,10 @@ export function serialiseApiBody(body: unknown): string {
   } catch {
     // Last resort: attempt to build key=value pairs if possible
     if (typeof body === "object") {
-      try {
-        return Object.entries(body as Record<string, unknown>)
-          .map(([k, v]) => `${k}=${String(v)}`)
-          .join(", ");
-      } catch {
-        return String(body);
-      }
+      return Object.entries(body as Record<string, unknown>)
+        .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`)
+        .join(", ");
     }
-    return String(body);
+    return typeof body === "string" ? body : JSON.stringify(body);
   }
 }

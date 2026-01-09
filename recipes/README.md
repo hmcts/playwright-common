@@ -1,4 +1,4 @@
-# Recipes (copy-paste friendly, humanised)
+# Recipes (copy-paste friendly)
 
 Short, opinionated examples you can lift into your project to get value fast.
 
@@ -29,7 +29,7 @@ if (summary) {
 const { endpoints, totalHits } = scanApiEndpoints("./tests/api");
 fs.writeFileSync("./coverage/api-endpoints.json", JSON.stringify({ totalHits, endpoints }, null, 2));
 ```
-Archive the `.txt` and `.json` outputs in CI to give humans a quick view of “what we covered” and “which APIs we hit.”
+Archive the `.txt` and `.json` outputs in CI to givea quick view of “what is covered” and “which APIs been hit.”
 
 ## Retry tuned for 429 (Retry-After aware)
 

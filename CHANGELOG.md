@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ApiClient hardening: default timeout, richer ApiClientError metadata (correlationId/retryAfter/body preview), fetch error wrapping, Retry-After-aware backoff, redaction fail-closed attachments (raw only when debug is explicit).
 - Retry helper now honours `retryAfterMs` on errors when scheduling backoff.
-- Added human-friendly recipes (coverage/endpoint scripting, attachment safety, fixture wiring) and a 429-aware retry example.
+- Added recipes (coverage/endpoint scripting, attachment safety, fixture wiring) and a 429-aware retry example.
 - prepack builds before publish for safer releases.
-- Added coverage utilities to parse `coverage-summary.json`, format human-readable summaries, and provide table-friendly rows.
+- Added coverage utilities to parse `coverage-summary.json`, into formated summaries, and provide table-friendly rows.
 - Added API endpoint scanner utility to count Playwright API client calls per endpoint with configurable patterns/extensions.
 - Hardened `TableUtils` alignment to drop selection/action columns correctly; added unit coverage for table mapping, coverage, and endpoint scanning.
 

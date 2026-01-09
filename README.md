@@ -10,7 +10,7 @@ What you get:
 - **Configuration**: common/playwright/linting configs.
 - **Utilities**: battle-tested helpers for API clients, waiting, validation, etc.
 - **Observability Foundations**: Winston-based logger, redaction, instrumented API client with ready-to-attach artefacts (fail-closed on raw bodies unless `PLAYWRIGHT_DEBUG_API` is explicitly enabled).
-- **Coverage + Endpoint utilities**: read c8 summaries, emit human-friendly text/rows, and scan Playwright API specs for endpoint hit counts.
+- **Coverage + Endpoint utilities**: read c8 summaries, emit read friendly text/rows, and scan Playwright API specs for endpoint hit counts.
 
 ## Contributing
 
@@ -58,7 +58,7 @@ Default redaction coverage (headers/fields masked automatically):
 
 You can extend/override patterns via `redaction.patterns` or `redactKeys` when creating the logger or API client.
 
-## ApiClient guide (human-friendly)
+## ApiClient guide
 
 The `ApiClient` wraps Playwright’s `APIRequestContext` with:
 - Redacted structured logging (Winston).
@@ -138,7 +138,7 @@ Default timeout: 30s per request (override via `timeoutMs` per call).
 
 ## CI/publishing notes
 - `prepack` runs `yarn build` before publish.
-- Publish/archive human-friendly artefacts:
+- Publish/archive artefacts:
   - `coverage/coverage-summary.txt` and `coverage/coverage-summary-rows.json`
   - `coverage/api-endpoints.json`
   - Use Odhin/Playwright tabs to render coverage/endpoint rows.
@@ -232,7 +232,7 @@ const summary = readCoverageSummary("./reports/tests/coverage/api-playwright/cov
 if (!summary) {
   console.log("No coverage available");
 } else {
-  console.log(summary.textSummary);           // human-friendly block for a .txt artefact
+  console.log(summary.textSummary);
   const rows = buildCoverageRows(summary.totals); // normalised rows for HTML/Markdown tables
 }
 ```
@@ -460,7 +460,7 @@ scanApiEndpoints("./tests/api", {
 - Use `scanApiEndpoints` against your API spec folder and publish the resulting JSON; it makes “tested endpoints” tabs trivial to render.
 - Attach API calls safely: `buildApiAttachment` will only include raw bodies when `PLAYWRIGHT_DEBUG_API` is true/1 or `NODE_ENV=development` (fail-closed for CI). Leave `includeRaw=false` for pipeline artefacts.
 
-Human-friendly goal: every pipeline run should tell people “what we covered” and “which APIs we hit” without spelunking artefacts.
+Goal: every pipeline run should tell people “what we covered” and “which APIs we hit” without bizzare artefacts.
 ```
 
 ### Logging & API Client
