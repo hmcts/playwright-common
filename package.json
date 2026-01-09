@@ -1,7 +1,7 @@
 {
   "name": "@hmcts/playwright-common",
   "description": "Common library for Playwright tests",
-  "version": "1.0.39",
+  "version": "1.0.40",
   "author": "HMCTS",
   "license": "MIT",
   "repository": {
@@ -29,31 +29,38 @@
     "globals": "^16.0.0",
     "lighthouse": "^12.2.1",
     "playwright-lighthouse": "^4.0.0",
+    "ts-morph": "^22.0.0",
     "typescript": "^5.6.2",
     "typescript-eslint": "^8.8.0",
     "winston": "^3.13.0"
   },
   "peerDependencies": {
-    "@playwright/test": "^1.56.1",
-    "playwright-core": "^1.56.1"
+    "@playwright/test": "^1.57.0",
+    "playwright-core": "^1.57.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.56.1",
+    "@playwright/test": "^1.57.0",
     "@types/node": "^24.0.8",
     "@types/winston": "^2.4.4",
     "@typescript-eslint/parser": "^8.8.0",
-    "playwright-core": "^1.56.1",
+    "playwright-core": "^1.57.0",
     "vitest": "^1.6.0"
   },
   "scripts": {
     "build": "rm -rf dist && yarn tsc -p tsconfig.json",
     "build:package": "yarn build && yarn pack",
     "lint": "yarn eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "yarn build"
   },
+  "prepack": "yarn build",
   "bin": {
     "delete-nightly-dev-branch": "./dist/scripts/delete-nightly-dev-branch.js",
     "get-secrets": "./dist/scripts/get-secrets.js"
   },
-  "packageManager": "yarn@4.11.0"
+  "resolutions": {
+    "glob": "^11.0.0",
+    "esbuild": "^0.25.0"
+  },
+  "packageManager": "yarn@4.12.0"
 }

@@ -42,23 +42,40 @@ export class TableUtils {
 
     for (let i = 0; i < rowCount; i++) {
       const row = rows.nth(i);
-      // include both th and td in body rows
       const cells = row.locator('th, td');
-      const cellCount = await cells.count();
-
-      // if there’s an extra unlabeled cell (e.g., checkbox), align from the right
-      const offset = Math.max(0, cellCount - headers.length);
+      const cellTexts = (await cells.allInnerTexts()).map((text) => text.trim());
+      const alignedCells = this.alignCells(cellTexts, headers.length);
 
       const rowData: Record<string, string> = {};
-      for (let j = 0; j < headers.length && j + offset < cellCount; j++) {
+      for (let j = 0; j < headers.length && j < alignedCells.length; j++) {
         const header = headers[j];
         if (!header) continue;
-        const text = (await cells.nth(j + offset).innerText()).trim();
-        rowData[header] = text;
+        rowData[header] = alignedCells[j] ?? "";
       }
       out.push(rowData);
     }
     return out;
   }
 
+  private alignCells(cells: string[], headerCount: number): string[] {
+    if (cells.length === headerCount) {
+      return cells;
+    }
+
+    const firstCell = cells.at(0);
+    const selectionTrimmed =
+      cells.length > headerCount && firstCell !== undefined && TableUtils.looksLikeSelectionCell(firstCell)
+        ? cells.slice(1)
+        : cells;
+
+    if (selectionTrimmed.length > headerCount) {
+      return selectionTrimmed.slice(0, headerCount);
+    }
+    return selectionTrimmed;
+  }
+
+  private static looksLikeSelectionCell(text: string): boolean {
+    const trimmed = text.trim();
+    return trimmed === "" || trimmed === "☐" || trimmed === "☑";
+  }
 }

@@ -1,5 +1,5 @@
 /**
- * Serialize an API response body into a human-readable string for error messages.
+ * Serialize an API response body into a readable string for error messages.
  * Strings are returned as-is; objects are JSON stringified; undefined/null produce a placeholder.
  */
 export function serialiseApiBody(body: unknown): string {
