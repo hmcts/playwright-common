@@ -11,6 +11,7 @@ export default tseslint.config(
       ".pnp.cjs",
       ".pnp.loader.mjs",
       "format-v4-audit.cjs",
+      "recipes/**",
     ],
   },
   {
@@ -26,6 +27,15 @@ export default tseslint.config(
     },
     rules: {
       "@typescript-eslint/no-floating-promises": "error",
+      // Ban console usage in src to enforce structured logging; allow in tests via override below
+      "no-console": ["error", { allow: ["warn", "error"] }],
+    },
+  },
+  {
+    files: ["tests/**/*.ts"],
+    rules: {
+      // Allow console in tests for simple debugging without enforcing logger
+      "no-console": "off",
     },
   },
   {

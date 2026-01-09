@@ -1,6 +1,8 @@
 import { APIRequestContext, APIResponse, request } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import type { Logger } from "winston";
+import { CircuitBreaker } from "./circuit-breaker.js";
+import type { CircuitBreakerMetrics } from "./circuit-breaker.js";
 import {
   buildRedactionState,
   sanitiseHeaders,
@@ -10,6 +12,7 @@ import {
   type RedactionState,
 } from "../logging/redaction.js";
 import { createLogger } from "../logging/logger.js";
+import type { LoggerOptions } from "../logging/logger.js";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -31,6 +34,15 @@ export interface ApiClientOptions {
   captureRawBodies?: boolean;
   correlationId?: string;
   onResponse?: (entry: ApiLogEntry) => void;
+  onError?: (error: ApiClientError) => void;
+  circuitBreaker?: {
+    enabled?: boolean;
+    options?: {
+      failureThreshold?: number;
+      cooldownMs?: number;
+      halfOpenMaxAttempts?: number;
+    };
+  };
 }
 
 type QueryParamValue = string | number | boolean | undefined;
@@ -86,12 +98,31 @@ export interface ApiLogEntry {
 export class ApiClientError extends Error {
   public readonly status: number;
   public readonly logEntry: ApiLogEntry;
+  public readonly bodyPreview: string | undefined;
+  public readonly endpointPath: string | undefined;
+  public readonly attempt: number | undefined;
+  public readonly elapsedMs: number | undefined;
+  public readonly correlationId: string | undefined;
+  public readonly retryAfterMs: number | undefined;
 
-  constructor(message: string, status: number, logEntry: ApiLogEntry) {
+  constructor(message: string, status: number, logEntry: ApiLogEntry, meta?: {
+    bodyPreview?: string;
+    endpointPath?: string;
+    attempt?: number;
+    elapsedMs?: number;
+    correlationId?: string;
+    retryAfterMs?: number;
+  }) {
     super(message);
     this.name = "ApiClientError";
     this.status = status;
     this.logEntry = logEntry;
+    this.bodyPreview = meta?.bodyPreview;
+    this.endpointPath = meta?.endpointPath;
+    this.attempt = meta?.attempt;
+    this.elapsedMs = meta?.elapsedMs;
+    this.correlationId = meta?.correlationId;
+    this.retryAfterMs = meta?.retryAfterMs;
   }
 }
 
@@ -100,16 +131,18 @@ export class ApiClientError extends Error {
  * Provides redacted structured logging, correlation IDs and optional raw body capture.
  */
 export class ApiClient {
-  private readonly baseUrl?: string;
+  private readonly baseUrl: string | undefined;
   private readonly defaultHeaders: Record<string, string>;
   private readonly requestFactory: () => Promise<APIRequestContext>;
   private readonly logger: Logger;
   private readonly name: string;
   private readonly redactionState: RedactionState;
   private readonly captureRawBodies: boolean;
-  private readonly globalCorrelationId?: string;
-  private readonly onResponse?: (entry: ApiLogEntry) => void;
-  private contextPromise?: Promise<APIRequestContext>;
+  private readonly globalCorrelationId: string | undefined;
+  private readonly onResponse: ((entry: ApiLogEntry) => void) | undefined;
+  private readonly onError: ((error: ApiClientError) => void) | undefined;
+  private readonly breaker: CircuitBreaker | undefined;
+  private contextPromise: Promise<APIRequestContext> | undefined;
 
   constructor(options?: ApiClientOptions) {
     this.baseUrl = options?.baseUrl;
@@ -119,21 +152,60 @@ export class ApiClient {
     this.name = options?.name ?? "api-client";
     this.logger =
       options?.logger ??
-      createLogger({
-        serviceName: options?.loggerOptions?.serviceName ?? this.name,
-        level: options?.loggerOptions?.level,
-        format: options?.loggerOptions?.format,
-      });
-    this.redactionState = buildRedactionState({
-      enabled: options?.redaction?.enabled,
-      patterns: options?.redaction?.patterns,
-    });
+      (() => {
+        const loggerOpts: LoggerOptions = {
+          serviceName: options?.loggerOptions?.serviceName ?? this.name,
+        };
+        if (options?.loggerOptions?.level !== undefined) {
+          loggerOpts.level = options.loggerOptions.level;
+        }
+        if (options?.loggerOptions?.format !== undefined) {
+          loggerOpts.format = options.loggerOptions.format;
+        }
+        return createLogger(loggerOpts);
+      })();
+    const redactionOpts: { enabled?: boolean; patterns?: RedactPattern[] } = {};
+    if (options?.redaction?.enabled !== undefined) {
+      redactionOpts.enabled = options.redaction.enabled;
+    }
+    if (options?.redaction?.patterns !== undefined) {
+      redactionOpts.patterns = options.redaction.patterns;
+    }
+    this.redactionState = buildRedactionState(redactionOpts);
     const debugBodies =
       process.env.PLAYWRIGHT_DEBUG_API === "1" ||
       process.env.PLAYWRIGHT_DEBUG_API?.toLowerCase() === "true";
+    
+    // Warn if debug mode is enabled in production or CI
+    if (debugBodies) {
+      const env = process.env.NODE_ENV || "development";
+      const isCI = process.env.CI === "true" || process.env.CI === "1";
+      
+      if (env === "production" || isCI) {
+        this.logger.warn(
+          `PLAYWRIGHT_DEBUG_API is enabled in ${isCI ? "CI" : env} environment. ` +
+          "Raw request/response bodies will be logged, which may expose sensitive data. " +
+          "Disable PLAYWRIGHT_DEBUG_API in CI/production environments."
+        );
+      } else {
+        this.logger.info(
+          "PLAYWRIGHT_DEBUG_API is enabled - raw request/response bodies will be captured for debugging"
+        );
+      }
+    }
+    
     this.captureRawBodies = options?.captureRawBodies ?? debugBodies;
     this.globalCorrelationId = options?.correlationId;
     this.onResponse = options?.onResponse;
+    this.onError = options?.onError;
+    this.breaker = options?.circuitBreaker?.enabled
+      ? new CircuitBreaker(options.circuitBreaker.options)
+      : undefined;
+  }
+
+  /** Expose circuit breaker metrics (undefined if breaker disabled) */
+  public getCircuitBreakerMetrics(): CircuitBreakerMetrics | undefined {
+    return this.breaker?.getMetrics();
   }
 
   public async dispose(): Promise<void> {
@@ -190,6 +262,26 @@ export class ApiClient {
     path: string,
     options?: ApiRequestOptions
   ): Promise<ApiResponsePayload<T>> {
+    if (this.breaker && !this.breaker.canProceed()) {
+      const err = new ApiClientError(
+        "Circuit open: request blocked",
+        503,
+        {
+          id: randomUUID(),
+          name: this.name,
+          method,
+          url: this.buildUrl(path),
+          status: 503,
+          ok: false,
+          timestamp: new Date().toISOString(),
+          durationMs: 0,
+          request: {},
+          response: {},
+        }
+      );
+      this.onError?.(err);
+      throw err;
+    }
     const context = await this.getContext();
     const requestHeaders = {
       ...this.defaultHeaders,
@@ -201,13 +293,28 @@ export class ApiClient {
       options?.correlationId ?? this.globalCorrelationId ?? randomUUID();
     const startTime = Date.now();
 
-    const response = await context.fetch(url, {
+    type FetchOptions = Parameters<APIRequestContext["fetch"]>[1];
+    const effectiveTimeout = options?.timeoutMs ?? 30_000;
+    let requestOptions: FetchOptions = {
       method,
       headers: requestHeaders,
-      data: options?.data,
-      form: options?.form,
-      params: this.buildParams(options?.query),
-      timeout: options?.timeoutMs,
+      timeout: effectiveTimeout,
+    };
+    const builtParams = this.buildParams(options?.query);
+    if (builtParams !== undefined) {
+      requestOptions = { ...requestOptions, params: builtParams };
+    }
+    if (options?.data !== undefined) {
+      requestOptions = { ...requestOptions, data: options.data };
+    }
+    if (options?.form !== undefined) {
+      requestOptions = { ...requestOptions, form: options.form };
+    }
+    const response = await this.safeFetch(context, url, requestOptions, {
+      method,
+      correlationId,
+      path,
+      startTime,
     });
 
     const durationMs = Date.now() - startTime;
@@ -225,17 +332,45 @@ export class ApiClient {
       responseHeaders,
       this.redactionState
     );
-    const sanitisedRequestData = sanitiseValue(
+    const sanitisedRequestData = sanitiseValue<unknown>(
       options?.data,
       this.redactionState
     );
-    const sanitisedForm = sanitiseValue(options?.form, this.redactionState);
-    const sanitisedQuery = sanitiseValue(options?.query, this.redactionState);
-    const sanitisedResponseBody = sanitiseValue(
+    const sanitisedForm = sanitiseValue<Record<string, string> | undefined>(
+      options?.form,
+      this.redactionState
+    );
+    const sanitisedQuery = sanitiseValue<Record<string, QueryParamValue> | undefined>(
+      options?.query,
+      this.redactionState
+    );
+    const sanitisedResponseBody: unknown = sanitiseValue(
       parsedBody,
       this.redactionState,
       "responseBody"
     );
+
+    const requestLog: ApiLogEntry["request"] = {};
+    if (sanitisedRequestHeaders) {
+      requestLog.headers = sanitisedRequestHeaders;
+    }
+    if (sanitisedRequestData !== undefined) {
+      requestLog.data = sanitisedRequestData;
+    }
+    if (sanitisedForm !== undefined) {
+      requestLog.form = sanitisedForm;
+    }
+    if (sanitisedQuery !== undefined) {
+      requestLog.query = sanitisedQuery;
+    }
+
+    const responseLog: ApiLogEntry["response"] = {};
+    if (sanitisedResponseHeaders) {
+      responseLog.headers = sanitisedResponseHeaders;
+    }
+    if (sanitisedResponseBody !== undefined) {
+      responseLog.body = sanitisedResponseBody;
+    }
 
     const logEntry: ApiLogEntry = {
       id: randomUUID(),
@@ -247,24 +382,20 @@ export class ApiClient {
       timestamp: new Date(startTime).toISOString(),
       durationMs,
       correlationId,
-      request: {
-        headers: sanitisedRequestHeaders,
-        data: sanitisedRequestData,
-        form: sanitisedForm,
-        query: sanitisedQuery,
-      },
-      response: {
-        headers: sanitisedResponseHeaders,
-        body: sanitisedResponseBody,
-      },
-      rawRequest: this.captureRawBodies
-        ? {
-            data: options?.data,
-            form: options?.form,
-          }
-        : undefined,
-      rawResponse: this.captureRawBodies ? rawBody : undefined,
+      request: requestLog,
+      response: responseLog,
     };
+    if (this.captureRawBodies) {
+      const rawReq: NonNullable<ApiLogEntry["rawRequest"]> = {};
+      if (options?.data !== undefined) rawReq.data = options.data;
+      if (options?.form !== undefined) rawReq.form = options.form;
+      if (Object.keys(rawReq).length > 0) {
+        logEntry.rawRequest = rawReq;
+      }
+      if (rawBody !== undefined) {
+        logEntry.rawResponse = rawBody;
+      }
+    }
 
     if (!ok) {
       logEntry.error = `Request failed with status ${status}`;
@@ -281,21 +412,49 @@ export class ApiClient {
     this.onResponse?.(logEntry);
 
     if (!ok && options?.throwOnError !== false) {
-      throw new ApiClientError(
+      const retryAfterMs = parseRetryAfter(responseHeaders["retry-after"]);
+      const bodyPreview = buildBodyPreview(sanitisedResponseBody);
+      const errorMeta: {
+        bodyPreview?: string;
+        endpointPath?: string;
+        elapsedMs?: number;
+        correlationId?: string;
+        retryAfterMs?: number;
+      } = {
+        endpointPath: path,
+        elapsedMs: durationMs,
+        correlationId,
+      };
+      if (retryAfterMs !== undefined) {
+        errorMeta.retryAfterMs = retryAfterMs;
+      }
+      if (bodyPreview !== undefined) {
+        errorMeta.bodyPreview = bodyPreview;
+      }
+      const err = new ApiClientError(
         `Request failed with status ${status}`,
         status,
-        logEntry
+        logEntry,
+        errorMeta
       );
+      this.onError?.(err);
+      this.breaker?.onFailure();
+      throw err;
     }
 
-    return {
+    this.breaker?.onSuccess();
+
+    const payload: ApiResponsePayload<T> = {
       ok,
       status,
       data: parsedBody,
       logEntry,
       headers: responseHeaders,
-      rawBody: this.captureRawBodies ? rawBody : undefined,
     };
+    if (this.captureRawBodies && rawBody !== undefined) {
+      payload.rawBody = rawBody;
+    }
+    return payload;
   }
 
   /** Lazily build and cache the Playwright request context */
@@ -334,6 +493,78 @@ export class ApiClient {
     }
     return params;
   }
+
+  private async safeFetch(
+    context: APIRequestContext,
+    url: string,
+    options: Parameters<APIRequestContext["fetch"]>[1],
+    meta: { method: string; correlationId: string; path: string; startTime: number }
+  ): Promise<APIResponse> {
+    try {
+      return await context.fetch(url, options);
+    } catch (error) {
+      const durationMs = Date.now() - meta.startTime;
+      const requestLog: ApiLogEntry["request"] = {};
+      if (options?.headers) {
+        requestLog.headers = options.headers as Record<string, string>;
+      }
+      const logEntry: ApiLogEntry = {
+        id: randomUUID(),
+        name: this.name,
+        method: meta.method as HttpMethod,
+        url,
+        status: 0,
+        ok: false,
+        timestamp: new Date().toISOString(),
+        durationMs,
+        correlationId: meta.correlationId,
+        request: requestLog,
+        response: {},
+        error: error instanceof Error ? error.message : String(error),
+      };
+      this.logger.error(`${meta.method} ${url} -> fetch error`, {
+        correlationId: meta.correlationId,
+        durationMs,
+        apiCall: logEntry,
+      });
+      const err = new ApiClientError(
+        `Request failed: ${error instanceof Error ? error.message : String(error)}`,
+        0,
+        logEntry,
+        {
+          endpointPath: meta.path,
+          elapsedMs: durationMs,
+          correlationId: meta.correlationId,
+        }
+      );
+      this.onError?.(err);
+      this.breaker?.onFailure();
+      throw err;
+    }
+  }
+}
+
+function buildBodyPreview(body: unknown): string | undefined {
+  if (body === undefined) return undefined;
+  const raw =
+    typeof body === "string"
+      ? body
+      : JSON.stringify(body, null, 2);
+  return raw.slice(0, 2048);
+}
+
+function parseRetryAfter(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (/^\d+$/.test(trimmed)) {
+    return Number(trimmed) * 1000;
+  }
+  const date = Date.parse(trimmed);
+  if (!Number.isNaN(date)) {
+    const diff = date - Date.now();
+    return diff > 0 ? diff : undefined;
+  }
+  return undefined;
 }
 
 async function safeReadBody(response: APIResponse): Promise<string | undefined> {
@@ -374,12 +605,23 @@ export function buildApiAttachment(
   entry: ApiLogEntry,
   options?: ApiAttachmentOptions
 ): { name: string; body: string; contentType: string } {
-  const includeRaw = options?.includeRaw ?? false;
+  const includeRawRequested = options?.includeRaw ?? false;
+  const allowRawBodies =
+    includeRawRequested &&
+    (process.env.PLAYWRIGHT_DEBUG_API === "true" ||
+      process.env.PLAYWRIGHT_DEBUG_API === "1" ||
+      process.env.NODE_ENV === "development");
+  const includeRaw = includeRawRequested && allowRawBodies;
   const payload = {
     ...entry,
     rawRequest: includeRaw ? entry.rawRequest : undefined,
     rawResponse: includeRaw ? entry.rawResponse : undefined,
   };
+
+  if (includeRawRequested && !includeRaw) {
+    // Fail-closed: strip raw bodies unless explicitly enabled for local debugging
+    // No console logging here due to lint; consumers can inspect attachment payload to see raw missing.
+  }
 
   return {
     name: `api-${entry.method.toLowerCase()}-${entry.status}.json`,

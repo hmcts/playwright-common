@@ -3,6 +3,16 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.40]
+
+- ApiClient hardening: default timeout, richer ApiClientError metadata (correlationId/retryAfter/body preview), fetch error wrapping, Retry-After-aware backoff, redaction fail-closed attachments (raw only when debug is explicit).
+- Retry helper now honours `retryAfterMs` on errors when scheduling backoff.
+- Added recipes (coverage/endpoint scripting, attachment safety, fixture wiring) and a 429-aware retry example.
+- prepack builds before publish for safer releases.
+- Added coverage utilities to parse `coverage-summary.json`, into formated summaries, and provide table-friendly rows.
+- Added API endpoint scanner utility to count Playwright API client calls per endpoint with configurable patterns/extensions.
+- Hardened `TableUtils` alignment to drop selection/action columns correctly; added unit coverage for table mapping, coverage, and endpoint scanning.
+
 ## [1.0.39]
 
 - Updated the table scraping function to allow for checkboxes that might occur on the right hand side of the table.
@@ -143,7 +153,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.39]: https://github.com/hmcts/playwright-common/compare/v1.0.39...HEAD
+[1.0.40]: https://github.com/hmcts/playwright-common/compare/v1.0.40...HEAD
+[1.0.39]: https://github.com/hmcts/playwright-common/compare/v1.0.39...v1.0.40
 [1.0.38]: https://github.com/hmcts/playwright-common/compare/v1.0.38...v1.0.39
 [1.0.37]: https://github.com/hmcts/playwright-common/compare/v1.0.37...v1.0.38
 [1.0.36]: https://github.com/hmcts/playwright-common/compare/v1.0.36...v1.0.37
