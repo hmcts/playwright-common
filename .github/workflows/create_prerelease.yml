@@ -9,18 +9,22 @@ jobs:
   prerelease:
     if: contains(github.event.pull_request.labels.*.name, 'create-prerelease')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write      # REQUIRED: For OIDC Trusted Publishing
+      pull-requests: write # REQUIRED: For gh pr comment
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Set node version and build
+      - name: Set node version
         uses: actions/setup-node@v4
         with:
-          always-auth: true
-          node-version: "22.x"
-          registry-url: "https://registry.npmjs.org"
+          node-version: "24.x"
+
       - run: yarn install --frozen-lockfile
       - run: yarn build
 
@@ -28,10 +32,15 @@ jobs:
         id: version
         run: echo "version=$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version)")" >> "$GITHUB_OUTPUT"
 
-      - name: Publish pre-release
-        run: yarn npm publish --tag ${{ steps.version.outputs.version }} --access public
-        env:
-          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_API_TOKEN }}
+      - name: Publish pre-release (Trusted Publishing)
+        run: |
+          # 1. Clean environment to ensure OIDC is used (Defensive practice)
+          unset NODE_AUTH_TOKEN
+          export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc-noauth"
+          printf "registry=https://registry.npmjs.org/\n" > "$NPM_CONFIG_USERCONFIG"
+          
+          # 2. Publish using npm
+          npm publish --tag "${{ steps.version.outputs.version }}" --access public
 
       - name: Comment PR with published version
         env:

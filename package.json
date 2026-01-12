@@ -6,7 +6,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git@github.com:hmcts/playwright-common.git"
+    "url": "https://github.com/hmcts/playwright-common.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -50,10 +55,8 @@
     "build": "rm -rf dist && yarn tsc -p tsconfig.json",
     "build:package": "yarn build && yarn pack",
     "lint": "yarn eslint .",
-    "test": "vitest run",
-    "prepack": "yarn build"
+    "test": "vitest run"
   },
-  "prepack": "yarn build",
   "bin": {
     "delete-nightly-dev-branch": "./dist/scripts/delete-nightly-dev-branch.js",
     "get-secrets": "./dist/scripts/get-secrets.js"

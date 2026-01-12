@@ -2,25 +2,35 @@ name: Create NPM release
 on:
   release:
     types: [published]
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read       # Required for actions/checkout
+      id-token: write      # REQUIRED: For OIDC Trusted Publishing
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.target_commitish }}
 
-      - name: Set node version and build
+      - name: Set node version
         uses: actions/setup-node@v4
         with:
-          always-auth: true
-          node-version: "22.x"
-          registry-url: "https://registry.npmjs.org"
+          node-version: "24.x"
+
       - run: yarn install --frozen-lockfile
       - run: yarn build
 
-      - name: Publish version
-        run: yarn npm publish --access public
-        env:
-          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_API_TOKEN }}
+      - name: Publish version (Trusted Publishing)
+        run: |
+          # 1. Clean environment to force OIDC (Defensive practice)
+          unset NODE_AUTH_TOKEN
+          export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc-noauth"
+          printf "registry=https://registry.npmjs.org/\n" > "$NPM_CONFIG_USERCONFIG"
+
+          # 2. Publish using npm
+          # Uses version from package.json and defaults to 'latest' tag
+          npm publish --access public
