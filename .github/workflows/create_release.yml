@@ -1,36 +1,69 @@
-name: Create NPM release
+name: Publish Package
 on:
+  # 1. Trigger for "Creating a new release" (Production)
   release:
     types: [published]
 
+  # 2. Trigger for "Creating a pre-release" (PR Label)
+  pull_request:
+    types: [labeled]
+    branches:
+      - master
+
 jobs:
-  release:
+  publish:
+    # Logic: Run if it's a Release OR if it's a PR with the 'create-prerelease' label
+    if: >-
+      github.event_name == 'release' ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'create-prerelease'))
+    
     runs-on: ubuntu-latest
     permissions:
-      contents: read       # Required for actions/checkout
+      contents: read
       id-token: write      # REQUIRED: For OIDC Trusted Publishing
+      pull-requests: write # REQUIRED: To comment on PRs
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.target_commitish }}
+          # If PR: checkout the specific PR commit (so we get the manual version bump)
+          # If Release: checkout the release tag
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.release.target_commitish }}
 
       - name: Set node version
         uses: actions/setup-node@v4
         with:
-          node-version: "24.x"
+          node-version: "24.x" # Includes npm v11+ for Trusted Publishing
 
       - run: yarn install --frozen-lockfile
       - run: yarn build
 
-      - name: Publish version (Trusted Publishing)
+      - name: Get version from package.json
+        id: version
+        # This reads whatever you manually set in package.json (e.g. 1.0.14-EXUI-3513-rc.0)
+        run: echo "version=$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version)")" >> "$GITHUB_OUTPUT"
+
+      - name: Configure npm for OIDC
         run: |
-          # 1. Clean environment to force OIDC (Defensive practice)
           unset NODE_AUTH_TOKEN
           export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc-noauth"
           printf "registry=https://registry.npmjs.org/\n" > "$NPM_CONFIG_USERCONFIG"
 
-          # 2. Publish using npm
-          # Uses version from package.json and defaults to 'latest' tag
-          npm publish --access public
+      # --- PRE-RELEASE ---
+      - name: Publish Pre-Release
+        if: github.event_name == 'pull_request'
+        run: npm publish --tag "${{ steps.version.outputs.version }}" --access public
+
+      # --- NEW RELEASE ---
+      - name: Publish Release
+        if: github.event_name == 'release'
+        run: npm publish --access public
+
+      - name: Comment PR with published version
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "🚀 Pre-release version \`${{ steps.version.outputs.version }}\` has been published"
