@@ -30,7 +30,6 @@ jobs:
         with:
           node-version: "24.x"
 
-      # Matches the working example's defensive npm update
       - name: Ensure npm version
         run: npm install -g npm@11.5.1
 
@@ -41,25 +40,23 @@ jobs:
         id: version
         run: echo "version=$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version)")" >> "$GITHUB_OUTPUT"
 
-      - name: Configure npm for OIDC (Defensive Setup)
+      - name: Configure npm for OIDC
         run: |
-          # 1. Clear any existing auth tokens to prevent conflicts
-          unset NODE_AUTH_TOKEN
+          # 1. Create the custom config file path
+          NPM_CONFIG_PATH="$RUNNER_TEMP/npmrc-noauth"
           
-          # 2. Create a fresh, empty user config
-          export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc-noauth"
-          
-          # 3. Force registry to public npm (Standard + Scoped)
-          printf "registry=https://registry.npmjs.org/\n" > "$NPM_CONFIG_USERCONFIG"
-          printf "@hmcts:registry=https://registry.npmjs.org/\n" >> "$NPM_CONFIG_USERCONFIG"
+          # 2. IMPORTANT: Persist this path to the GitHub Environment
+          echo "NPM_CONFIG_USERCONFIG=$NPM_CONFIG_PATH" >> "$GITHUB_ENV"
 
-          # 4. Remove any lingering tokens
+          # 3. Populate the config file
+          #    Force both generic and @hmcts scope to use public registry
+          printf "registry=https://registry.npmjs.org/\n" > "$NPM_CONFIG_PATH"
+          printf "@hmcts:registry=https://registry.npmjs.org/\n" >> "$NPM_CONFIG_PATH"
+
+          # 4. Clean up any conflicting tokens
+          unset NODE_AUTH_TOKEN
           npm config delete //registry.npmjs.org/:_authToken || true
           npm config delete _authToken || true
-          
-          # 5. Debug: Verify the clean config
-          echo "Using clean .npmrc at $NPM_CONFIG_USERCONFIG"
-          cat "$NPM_CONFIG_USERCONFIG"
 
       # --- SCENARIO A: PRE-RELEASE ---
       - name: Publish Pre-Release
