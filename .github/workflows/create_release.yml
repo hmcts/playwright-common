@@ -1,10 +1,7 @@
 name: Publish Package
 on:
-  # 1. Trigger for "Creating a new release" (Production)
   release:
     types: [published]
-
-  # 2. Trigger for "Creating a pre-release" (PR Label)
   pull_request:
     types: [labeled]
     branches:
@@ -12,7 +9,6 @@ on:
 
 jobs:
   publish:
-    # Logic: Run if it's a Release OR if it's a PR with the 'create-prerelease' label
     if: >-
       github.event_name == 'release' ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'create-prerelease'))
@@ -27,8 +23,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          # If PR: checkout the specific PR commit (so we get the manual version bump)
-          # If Release: checkout the release tag
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.release.target_commitish }}
 
       - name: Set node version
@@ -36,29 +30,45 @@ jobs:
         with:
           node-version: "24.x"
 
+      # Matches the working example's defensive npm update
+      - name: Ensure npm version
+        run: npm install -g npm@11.5.1
+
       - run: yarn install --frozen-lockfile
       - run: yarn build
 
       - name: Get version from package.json
         id: version
-        # This reads whatever you manually set in package.json (e.g. 1.0.14-EXUI-3513-rc.0)
         run: echo "version=$(node -e "import fs from 'fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version)")" >> "$GITHUB_OUTPUT"
 
-      - name: Configure npm for OIDC
+      - name: Configure npm for OIDC (Defensive Setup)
         run: |
+          # 1. Clear any existing auth tokens to prevent conflicts
           unset NODE_AUTH_TOKEN
+          
+          # 2. Create a fresh, empty user config
           export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc-noauth"
+          
+          # 3. Force registry to public npm (Standard + Scoped)
           printf "registry=https://registry.npmjs.org/\n" > "$NPM_CONFIG_USERCONFIG"
+          printf "@hmcts:registry=https://registry.npmjs.org/\n" >> "$NPM_CONFIG_USERCONFIG"
 
-      # --- PRE-RELEASE ---
+          # 4. Remove any lingering tokens
+          npm config delete //registry.npmjs.org/:_authToken || true
+          npm config delete _authToken || true
+          
+          # 5. Debug: Verify the clean config
+          echo "Using clean .npmrc at $NPM_CONFIG_USERCONFIG"
+          cat "$NPM_CONFIG_USERCONFIG"
+
+      # --- SCENARIO A: PRE-RELEASE ---
       - name: Publish Pre-Release
         if: github.event_name == 'pull_request'
         run: npm publish --tag prerelease --access public --provenance
 
-      # --- NEW RELEASE ---
+      # --- SCENARIO B: PRODUCTION RELEASE ---
       - name: Publish Release
         if: github.event_name == 'release'
-        # Defaults to 'latest' tag
         run: npm publish --access public --provenance
 
       - name: Comment PR with published version
