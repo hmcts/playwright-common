@@ -53,13 +53,13 @@ jobs:
       # --- PRE-RELEASE ---
       - name: Publish Pre-Release
         if: github.event_name == 'pull_request'
-        run: npm publish --tag prerelease --access public
+        run: npm publish --tag prerelease --access public --provenance
 
       # --- NEW RELEASE ---
       - name: Publish Release
         if: github.event_name == 'release'
         # Defaults to 'latest' tag
-        run: npm publish --access public
+        run: npm publish --access public --provenance
 
       - name: Comment PR with published version
         if: github.event_name == 'pull_request'

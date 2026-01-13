@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hmcts/playwright-common.git"
+    "url": "git+https://github.com/hmcts/playwright-common.git"
   },
   "publishConfig": {
     "access": "public",
@@ -58,8 +58,8 @@
     "test": "vitest run"
   },
   "bin": {
-    "delete-nightly-dev-branch": "./dist/scripts/delete-nightly-dev-branch.js",
-    "get-secrets": "./dist/scripts/get-secrets.js"
+    "delete-nightly-dev-branch": "dist/scripts/delete-nightly-dev-branch.js",
+    "get-secrets": "dist/scripts/get-secrets.js"
   },
   "resolutions": {
     "glob": "^11.0.0",
