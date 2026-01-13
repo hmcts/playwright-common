@@ -1,54 +1,51 @@
 name: Publish Package
 
 on:
-  # Trigger 1: Push code to the 'prerelease' branch
   push:
     branches:
       - prerelease
-  
-  # Trigger 2: Create a formal Release in GitHub UI
   release:
     types: [published]
-
-permissions:
-  id-token: write 
-  contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '24.x'
+          node-version: "24.x"
+          registry-url: "https://registry.npmjs.org"
+          scope: "@hmcts"
 
-      - name: Update npm
-        run: npm install -g npm@11.5.1
+      - name: Ensure npm version
+        run: |
+          npm --version
+          npm i -g npm@11.5.1
+          npm --version
 
       - run: yarn install --frozen-lockfile
       - run: yarn build
 
-      # --- CONFIGURATION ---
-      - name: Configure Registry
+      - name: Ensure no token auth is present
         run: |
-          # 1. Force the @hmcts scope to use the public registry
-          #    (Without this, npm tries to publish to GitHub Packages and fails)
-          npm config set @hmcts:registry=https://registry.npmjs.org
-          
-          # 2. Ensure default registry is public
-          npm config set registry=https://registry.npmjs.org
+          unset NODE_AUTH_TOKEN
+          npm config delete //registry.npmjs.org/:_authToken || true
+          npm config delete _authToken || true
+          npm config set registry https://registry.npmjs.org/
+          npm config set @hmcts:registry https://registry.npmjs.org/
+          npm config get registry
 
-      # --- SCENARIO A: PRERELEASE BRANCH ---
       - name: Publish Prerelease
-        # Run only when pushing to the 'prerelease' branch
         if: github.ref == 'refs/heads/prerelease'
-        # --tag prerelease: Prevents this from being installed as 'latest'
         run: npm publish --tag prerelease --provenance --access public
 
-      # --- SCENARIO B: PRODUCTION RELEASE ---
       - name: Publish Release
-        # Run only when a GitHub Release is published
         if: github.event_name == 'release'
         run: npm publish --provenance --access public
