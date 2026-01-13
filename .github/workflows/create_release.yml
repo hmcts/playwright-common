@@ -34,11 +34,16 @@ jobs:
 
       - run: yarn install --frozen-lockfile
       - run: yarn build
-      
+
       - name: Configure Registry
         run: |
           npm config set @hmcts:registry https://registry.npmjs.org/
           npm config set registry https://registry.npmjs.org/
+
+      - name: OIDC availability check
+        run: |
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL=${ACTIONS_ID_TOKEN_REQUEST_URL:-<missing>}"
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN is set? $([ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ] && echo yes || echo no)"
 
       - name: Force OIDC (no token)
         run: |
