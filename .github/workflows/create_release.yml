@@ -34,7 +34,7 @@ jobs:
       - name: Set node version
         uses: actions/setup-node@v4
         with:
-          node-version: "24.x" # Includes npm v11+ for Trusted Publishing
+          node-version: "24.x"
 
       - run: yarn install --frozen-lockfile
       - run: yarn build
@@ -53,11 +53,12 @@ jobs:
       # --- PRE-RELEASE ---
       - name: Publish Pre-Release
         if: github.event_name == 'pull_request'
-        run: npm publish --tag "${{ steps.version.outputs.version }}" --access public
+        run: npm publish --tag prerelease --access public
 
       # --- NEW RELEASE ---
       - name: Publish Release
         if: github.event_name == 'release'
+        # Defaults to 'latest' tag
         run: npm publish --access public
 
       - name: Comment PR with published version
