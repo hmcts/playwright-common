@@ -1,9 +1,12 @@
 name: Publish Package
 
 on:
+  # Trigger 1: Push code to the 'prerelease' branch
   push:
     branches:
       - prerelease
+
+  # Trigger 2: Create a formal Release in GitHub UI
   release:
     types: [published]
 
@@ -12,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
       id-token: write
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -24,28 +27,44 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           scope: "@hmcts"
 
-      - name: Ensure npm version
+      - name: Update npm
         run: |
           npm --version
-          npm i -g npm@11.5.1
+          npm install -g npm@11.5.1
           npm --version
 
       - run: yarn install --frozen-lockfile
       - run: yarn build
 
-      - name: Ensure no token auth is present
+      - name: Configure Registry
         run: |
-          unset NODE_AUTH_TOKEN
-          npm config delete //registry.npmjs.org/:_authToken || true
-          npm config delete _authToken || true
-          npm config set registry https://registry.npmjs.org/
           npm config set @hmcts:registry https://registry.npmjs.org/
-          npm config get registry
+          npm config set registry https://registry.npmjs.org/
 
+      - name: Debug npm + environment
+        run: |
+          echo "event_name=$GITHUB_EVENT_NAME"
+          echo "ref=$GITHUB_REF"
+          echo "sha=$GITHUB_SHA"
+          echo "actor=$GITHUB_ACTOR"
+          echo "--- node/npm ---"
+          node -v
+          npm -v
+          echo "--- npm registry/auth ---"
+          npm config get registry
+          npm config get @hmcts:registry || true
+          npm config get userconfig
+          echo "--- npm config list (may include non-sensitive paths) ---"
+          npm config list
+          echo "--- auth checks (expected to fail with OIDC, that's ok) ---"
+          npm whoami || true
+
+      # --- PRERELEASE BRANCH ---
       - name: Publish Prerelease
         if: github.ref == 'refs/heads/prerelease'
         run: npm publish --tag prerelease --provenance --access public
 
+      # --- PRODUCTION RELEASE ---
       - name: Publish Release
         if: github.event_name == 'release'
         run: npm publish --provenance --access public
