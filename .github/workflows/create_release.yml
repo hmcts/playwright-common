@@ -1,19 +1,15 @@
 name: Publish Package
 
 on:
-  # Trigger 1: Push code to the 'prerelease' branch
   push:
     branches:
       - prerelease
-
-  # Trigger 2: Create a formal Release in GitHub UI
   release:
     types: [published]
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-
     permissions:
       id-token: write
       contents: read
@@ -36,12 +32,7 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn build
 
-      - name: Configure Registry
-        run: |
-          npm config set @hmcts:registry https://registry.npmjs.org/
-          npm config set registry https://registry.npmjs.org/
-
-      - name: Debug npm + environment
+      - name: Debug (pre-auth)
         run: |
           echo "event_name=$GITHUB_EVENT_NAME"
           echo "ref=$GITHUB_REF"
@@ -50,21 +41,32 @@ jobs:
           echo "--- node/npm ---"
           node -v
           npm -v
-          echo "--- npm registry/auth ---"
-          npm config get registry
-          npm config get @hmcts:registry || true
+          echo "--- npm registry/auth (before cleanup) ---"
           npm config get userconfig
-          echo "--- npm config list (may include non-sensitive paths) ---"
+          npm config get registry
           npm config list
-          echo "--- auth checks (expected to fail with OIDC, that's ok) ---"
-          npm whoami || true
 
-      # --- PRERELEASE BRANCH ---
+      - name: Force OIDC + Debug
+        run: |
+          unset NODE_AUTH_TOKEN
+          echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
+
+          export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc-noauth"
+          printf "registry=https://registry.npmjs.org/\n" > "$NPM_CONFIG_USERCONFIG"
+          printf "@hmcts:registry=https://registry.npmjs.org/\n" >> "$NPM_CONFIG_USERCONFIG"
+
+          npm config delete //registry.npmjs.org/:_authToken || true
+          npm config delete _authToken || true
+
+          echo "--- npm registry/auth (after cleanup) ---"
+          npm config get userconfig
+          npm config get registry
+          npm config list
+
       - name: Publish Prerelease
         if: github.ref == 'refs/heads/prerelease'
         run: npm publish --tag prerelease --provenance --access public
 
-      # --- PRODUCTION RELEASE ---
       - name: Publish Release
         if: github.event_name == 'release'
         run: npm publish --provenance --access public
