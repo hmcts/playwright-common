@@ -3,6 +3,14 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.41]
+### Changed
+- Updated npm publishing to use **Trusted Publishing (OIDC)** (no long-lived npm tokens).
+- Consolidated publishing into `.github/workflows/create_release.yml` to align with npm’s “single trusted publisher per package” model.
+- Split publishing into separate GitHub Actions jobs for clarity and isolation:
+  - **Pre-release** publish triggered by pushing tags matching `prerelease-*` (published with npm dist-tag `prerelease`).
+  - **Release** publish triggered by GitHub Release publish event.
+
 ## [1.0.40]
 
 - ApiClient hardening: default timeout, richer ApiClientError metadata (correlationId/retryAfter/body preview), fetch error wrapping, Retry-After-aware backoff, redaction fail-closed attachments (raw only when debug is explicit).
@@ -153,7 +161,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.0.40]: https://github.com/hmcts/playwright-common/compare/v1.0.40...HEAD
+[1.0.41]: https://github.com/hmcts/playwright-common/compare/v1.0.41...HEAD
+[1.0.40]: https://github.com/hmcts/playwright-common/compare/v1.0.40...v1.0.41
 [1.0.39]: https://github.com/hmcts/playwright-common/compare/v1.0.39...v1.0.40
 [1.0.38]: https://github.com/hmcts/playwright-common/compare/v1.0.38...v1.0.39
 [1.0.37]: https://github.com/hmcts/playwright-common/compare/v1.0.37...v1.0.38
