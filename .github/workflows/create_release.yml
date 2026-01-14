@@ -23,6 +23,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "24.x"
+          registry-url: "https://registry.npmjs.org"
+          scope: "@hmcts"
 
       - name: Ensure npm version (Trusted Publishing)
         run: |
@@ -36,12 +38,18 @@ jobs:
       - name: Build
         run: yarn build
 
+      - name: Debug package identity (root)
+        run: |
+          node -p "require('./package.json').name"
+          node -p "require('./package.json').version"
+          npm config get registry
+
       - name: Publish Prerelease (OIDC via npm)
         if: startsWith(github.ref, 'refs/tags/prerelease-')
+        env:
+          # Defensive: ensure no token-based auth is accidentally present
+          NODE_AUTH_TOKEN: ""
         run: |
-          # Ensure we do NOT publish using token-based auth (classic/granular).
-          unset NODE_AUTH_TOKEN
-
           # Use a fresh npm user config with no auth token to force OIDC Trusted Publishing.
           export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc-noauth"
           printf "registry=https://registry.npmjs.org/\n" > "$NPM_CONFIG_USERCONFIG"
@@ -55,9 +63,9 @@ jobs:
 
       - name: Publish Release (OIDC via npm)
         if: github.event_name == 'release'
+        env:
+          NODE_AUTH_TOKEN: ""
         run: |
-          unset NODE_AUTH_TOKEN
-
           export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc-noauth"
           printf "registry=https://registry.npmjs.org/\n" > "$NPM_CONFIG_USERCONFIG"
           printf "@hmcts:registry=https://registry.npmjs.org/\n" >> "$NPM_CONFIG_USERCONFIG"
