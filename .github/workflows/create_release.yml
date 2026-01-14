@@ -76,3 +76,4 @@ jobs:
           npm config delete _authToken || true
 
           npm publish --access public
+          

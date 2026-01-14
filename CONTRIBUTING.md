@@ -35,7 +35,7 @@ Remember that this is a shared package; try to avoid breaking changes. If they a
 
 ### Submit a PR for review
 
-Raise a PR to `main` from your branch; CODEOWNERS will be notified when the PR is created. You can also link your PR in Slack channels for visibility.
+Raise a PR to `master` from your branch; CODEOWNERS will be notified when the PR is created. You can also link your PR in Slack channels for visibility.
 
 Some things to consider:
 - Ensure your PR accurately describes what it is addressing in the title and description.
