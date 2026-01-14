@@ -55,7 +55,10 @@
     "build": "rm -rf dist && yarn tsc -p tsconfig.json",
     "build:package": "yarn build && yarn pack",
     "lint": "yarn eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prerelease:tag": "git tag -a prerelease-$(git rev-parse --short HEAD) -m \"prerelease\"",
+    "prerelease:push": "git push origin --tags",
+    "prerelease": "yarn prerelease:tag && yarn prerelease:push"
   },
   "bin": {
     "delete-nightly-dev-branch": "dist/scripts/delete-nightly-dev-branch.js",

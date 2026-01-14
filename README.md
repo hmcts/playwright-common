@@ -137,6 +137,13 @@ Default timeout: 30s per request (override via `timeoutMs` per call).
 - **Redaction**: extend `redaction.patterns` or `loggerOptions.redactKeys` if you see sensitive fields; raw bodies gated behind debug reduce leakage risk.
 
 ## CI/publishing notes
+Publishing is handled by GitHub Actions using Trusted Publishing (OIDC).
+
+Pre-releases: push a tag matching prerelease-* (publishes with npm dist-tag prerelease)
+Quick trigger: yarn prerelease
+Releases: publish a GitHub Release (Release UI)
+See CONTRIBUTING.md for the full procedure and versioning conventions.
+
 - `prepack` runs `yarn build` before publish.
 - Publish/archive artefacts:
   - `coverage/coverage-summary.txt` and `coverage/coverage-summary-rows.json`
