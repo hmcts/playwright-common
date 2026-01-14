@@ -86,7 +86,6 @@ Run:
 ```bash
 yarn prerelease
 ```
- - Note: the `yarn prerelease*` scripts create tags in the form `prerelease-<shortsha>` and do **not** follow the recommended `{PACKAGE_VERSION}-{JIRA-REF-TICKET-TITLE}-rc.{N}` naming convention; they are provided as a convenient option for testing.
 
 These map to:
 
