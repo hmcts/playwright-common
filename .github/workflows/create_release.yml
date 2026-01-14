@@ -1,12 +1,10 @@
+# .github/workflows/create_release.yml
 name: Publish Package
 
 on:
-  # PRERELEASE: push a tag like "prerelease-<anything>" (e.g. prerelease-6360b77)
   push:
     tags:
       - "prerelease-*"
-
-  # PRODUCTION: publish via GitHub Release UI
   release:
     types: [published]
 
@@ -14,51 +12,57 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
       contents: read
+      id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "24.x"
-          registry-url: "https://registry.npmjs.org"
-          scope: "@hmcts"
 
-      - name: Ensure npm version
+      - name: Ensure npm version (Trusted Publishing)
         run: |
           npm --version
           npm i -g npm@11.5.1
           npm --version
 
-      - run: yarn install --frozen-lockfile
-      - run: yarn build
+      - name: Install dependencies
+        run: yarn install --immutable
 
-      - name: Configure Registry
-        run: |
-          npm config set @hmcts:registry https://registry.npmjs.org/
-          npm config set registry https://registry.npmjs.org/
+      - name: Build
+        run: yarn build
 
-      - name: OIDC availability check
+      - name: Publish Prerelease (OIDC via npm)
+        if: startsWith(github.ref, 'refs/tags/prerelease-')
         run: |
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL=${ACTIONS_ID_TOKEN_REQUEST_URL:-<missing>}"
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN is set? $([ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ] && echo yes || echo no)"
-
-      - name: Force OIDC (no token)
-        run: |
+          # Ensure we do NOT publish using token-based auth (classic/granular).
           unset NODE_AUTH_TOKEN
-          echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
+
+          # Use a fresh npm user config with no auth token to force OIDC Trusted Publishing.
           export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc-noauth"
           printf "registry=https://registry.npmjs.org/\n" > "$NPM_CONFIG_USERCONFIG"
           printf "@hmcts:registry=https://registry.npmjs.org/\n" >> "$NPM_CONFIG_USERCONFIG"
+
+          # Defensive: remove any auth token entries if something tries to inject them.
           npm config delete //registry.npmjs.org/:_authToken || true
           npm config delete _authToken || true
 
-      - name: Publish Prerelease (tag-triggered)
-        if: startsWith(github.ref, 'refs/tags/prerelease-')
-        run: npm publish --tag prerelease --provenance --access public
+          npm publish --tag prerelease --provenance --access public
 
-      - name: Publish Release
+      - name: Publish Release (OIDC via npm)
         if: github.event_name == 'release'
-        run: npm publish --provenance --access public
+        run: |
+          unset NODE_AUTH_TOKEN
+
+          export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc-noauth"
+          printf "registry=https://registry.npmjs.org/\n" > "$NPM_CONFIG_USERCONFIG"
+          printf "@hmcts:registry=https://registry.npmjs.org/\n" >> "$NPM_CONFIG_USERCONFIG"
+
+          npm config delete //registry.npmjs.org/:_authToken || true
+          npm config delete _authToken || true
+
+          npm publish --provenance --access public
