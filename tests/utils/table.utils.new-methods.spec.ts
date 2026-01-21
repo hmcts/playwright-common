@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { TableUtils } from "../../src/utils/table.utils.js";
 import {
   createMockPage,
