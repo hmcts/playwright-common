@@ -3,6 +3,22 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- `TableUtils.parseKeyValueTable()` - Parse 2-column key-value tables (CCD case details tabs with label-value pairs)
+- `TableUtils.parseDataTable()` - Parse multi-column tables with headers (collections, documents, flags tables)
+- `TableUtils.parseWorkAllocationTable()` - Parse work allocation tables with sortable headers (handles buttons in headers, links in cells)
+
+### Changed
+- Enhanced error messages in table parsing utilities to include selector context
+- Replaced `window` with `globalThis` for better cross-environment compatibility
+- Updated table parsing to use `replaceAll()` for modern string replacement
+
+### Fixed
+- **CRITICAL:** `parseDataTable` now correctly excludes `<thead>` rows when using full table selectors (e.g., `#documents-table`). Previously, header rows were incorrectly returned as data rows.
+- `parseKeyValueTable` now allows empty value cells (returns empty string) instead of throwing errors. Key cells still require content.
+- `parseWorkAllocationTable` now implements all documented features: sort icon removal, whitespace normalization, column_N fallback keys for empty headers, and comprehensive hidden row filtering (display:none, visibility:hidden, aria-hidden, hidden attribute)
+
 ## [1.1.0]
 #### CI changes
 - Updated npm publishing to use **Trusted Publishing (OIDC)** (no long-lived npm tokens).
