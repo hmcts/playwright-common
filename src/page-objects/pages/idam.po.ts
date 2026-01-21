@@ -9,7 +9,6 @@ export interface UserCredentials {
 export class IdamPage {
   constructor(public readonly page: Page) {}
 
-  // ✅ Good: Using ARIA role (acceptable fallback when test ID unavailable)
   readonly heading = this.page.getByRole("heading", {
     name: "Sign in or create an account",
   });

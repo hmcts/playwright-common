@@ -34,17 +34,11 @@ export class ExuiCaseDetailsComponent {
     '[data-testid="challenged-access-alert"], ccd-case-challenged-access-request cut-alert[type="information"]'
   );
   
-  // ✅ Good: Using ARIA role (acceptable fallback when test ID unavailable)
   readonly requestAccessButton = this.page.getByRole("button", { name: "Request access" });
-  
-  // ✅ Good: Using ARIA role (acceptable fallback when test ID unavailable)
   readonly cancelLink = this.page.getByRole("link", { name: "Cancel" });
-  
-  // ✅ Good: Using ARIA role (acceptable fallback when test ID unavailable)
   readonly caseListNavLink = this.page.getByRole("link", { name: "Case list" });
   
   readonly tabs = {
-    // ✅ Good: Using ARIA role (acceptable fallback when test ID unavailable)
     documentsTab: this.page.getByRole("tab", { name: "Case documents" }),
   } as const;
   
