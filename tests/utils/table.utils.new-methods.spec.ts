@@ -1,6 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Locator, Page } from "@playwright/test";
 import { TableUtils } from "../../src/utils/table.utils.js";
+import {
+  createMockPage,
+  createMockLocator,
+  createMockDataTable,
+  createWorkAllocationLocator,
+  createMockDataTableWithActualTheadRows,
+  createWorkAllocationLocatorWithHiddenRows,
+  createMockDataTableWithCheckboxes,
+} from "./table.utils.test-helpers.js";
 
 describe("TableUtils - New Methods", () => {
   const utils = new TableUtils();
@@ -278,6 +287,45 @@ describe("TableUtils - New Methods", () => {
         { Name: "Alice Smith", Status: "Active" },
       ]);
     });
+
+    it("handles tables with selection checkboxes in first column", async () => {
+      // CRITICAL: Tables with checkboxes in first column should have text extracted, not ignored
+      const mockPage = createMockDataTableWithCheckboxes({
+        hasThead: true,
+        headers: ["", "Name", "Email"], // First header empty (checkbox column)
+        rows: [
+          { cells: ["☐", "Alice", "alice@example.com"], hasCheckbox: true },
+          { cells: ["☐", "Bob", "bob@example.com"], hasCheckbox: true },
+        ],
+      });
+
+      const result = await utils.parseDataTable("#table", mockPage);
+
+      // Checkbox columns show as empty text or checkbox symbol
+      expect(result).toEqual([
+        { column_1: "☐", Name: "Alice", Email: "alice@example.com" },
+        { column_1: "☐", Name: "Bob", Email: "bob@example.com" },
+      ]);
+    });
+
+    it("handles tables with action buttons in last column", async () => {
+      // Tables with action buttons should extract button text
+      const mockPage = createMockDataTable({
+        hasThead: true,
+        headers: ["Name", "Status", "Actions"],
+        rows: [
+          ["Alice", "Active", "Edit"],
+          ["Bob", "Inactive", "View"],
+        ],
+      });
+
+      const result = await utils.parseDataTable("#table", mockPage);
+
+      expect(result).toEqual([
+        { Name: "Alice", Status: "Active", Actions: "Edit" },
+        { Name: "Bob", Status: "Inactive", Actions: "View" },
+      ]);
+    });
   });
 
   describe("parseWorkAllocationTable", () => {
@@ -432,6 +480,64 @@ describe("TableUtils - New Methods", () => {
       const hasHiddenTask = result.some(row => row["Task"] === "Hidden Task");
       expect(hasHiddenTask).toBe(false);
     });
+
+    it("handles rows with selection checkboxes in cells", async () => {
+      // CRITICAL: Checkbox columns should show checkbox symbol or empty text
+      const mockLocator = createWorkAllocationLocator({
+        headers: [
+          { text: "", hasButton: false }, // Checkbox header
+          { text: "Task", hasButton: true },
+          { text: "Assignee", hasButton: false },
+        ],
+        rows: [
+          [
+            { text: "☐", hasLink: false, hasCheckbox: true },
+            { text: "Review Application", hasLink: true },
+            { text: "Alice", hasLink: false },
+          ],
+          [
+            { text: "☑", hasLink: false, hasCheckbox: true },
+            { text: "Submit Documents", hasLink: true },
+            { text: "Bob", hasLink: false },
+          ],
+        ],
+      });
+
+      const result = await utils.parseWorkAllocationTable(mockLocator);
+
+      // Checkbox column should be included with symbol
+      expect(result).toHaveLength(2);
+      expect(result[0]).toHaveProperty("column_1"); // Empty header gets fallback
+      expect(result[0]["Task"]).toBe("Review Application");
+      expect(result[1]["column_1"]).toBe("☑");
+    });
+
+    it("handles action buttons in data cells", async () => {
+      // Action buttons in cells should extract button text
+      const mockLocator = createWorkAllocationLocator({
+        headers: [
+          { text: "Task", hasButton: true },
+          { text: "Actions", hasButton: false },
+        ],
+        rows: [
+          [
+            { text: "Review Application", hasLink: false },
+            { text: "Assign", hasLink: false, hasButton: true },
+          ],
+          [
+            { text: "Submit Documents", hasLink: false },
+            { text: "Complete", hasLink: false, hasButton: true },
+          ],
+        ],
+      });
+
+      const result = await utils.parseWorkAllocationTable(mockLocator);
+
+      expect(result).toEqual([
+        { Task: "Review Application", Actions: "Assign" },
+        { Task: "Submit Documents", Actions: "Complete" },
+      ]);
+    });
   });
 
   describe("evaluateTable error handling", () => {
@@ -461,361 +567,4 @@ describe("TableUtils - New Methods", () => {
       ).rejects.toThrow("Page instance required for string selectors");
     });
   });
-}); // Close "TableUtils - New Methods" describe block
-
-// Mock helpers
-function createMockPage(rows: string[][]): Page {
-  return {
-    $$eval: vi.fn().mockImplementation((selector: string, fn: (rows: Element[]) => unknown) => {
-      // Mock globalThis in the evaluation context
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (globalThis as any).getComputedStyle = vi.fn().mockReturnValue({
-        display: "block",
-        visibility: "visible",
-      });
-
-      try {
-        // Simulate actual DOM elements
-        const mockRows = rows.map((cells) => {
-          const mockCells = cells.map((text) => ({
-            innerText: text,
-            textContent: text,
-          }));
-          
-          return {
-            querySelectorAll: () => mockCells,
-            hidden: false,
-            hasAttribute: () => false,
-            isConnected: true,
-            offsetParent: {},
-            getClientRects: () => [{}],
-          };
-        });
-        
-        return fn(mockRows as unknown as Element[]);
-      } finally {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        delete (globalThis as any).getComputedStyle;
-      }
-    }),
-  } as unknown as Page;
-}
-
-function createMockLocator(rows: string[][]): Locator {
-  return {
-    locator: vi.fn().mockReturnValue({
-      evaluateAll: vi.fn().mockImplementation((fn: (rows: Element[]) => unknown) => {
-        // Mock globalThis in the evaluation context
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (globalThis as any).getComputedStyle = vi.fn().mockReturnValue({
-          display: "block",
-          visibility: "visible",
-        });
-
-        try {
-          const mockRows = rows.map((cells) => {
-            const mockCells = cells.map((text) => ({
-              innerText: text,
-              textContent: text,
-            }));
-            
-            return {
-              querySelectorAll: () => mockCells,
-              hidden: false,
-              hasAttribute: () => false,
-              isConnected: true,
-              offsetParent: {},
-              getClientRects: () => [{}],
-            };
-          });
-          
-          return fn(mockRows as unknown as Element[]);
-        } finally {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          delete (globalThis as any).getComputedStyle;
-        }
-      }),
-    }),
-  } as unknown as Locator;
-}
-
-function createMockDataTable(config: {
-  hasThead: boolean;
-  headers: string[];
-  rows: string[][];
-}): Page {
-  return {
-    $$eval: vi.fn().mockImplementation((selector: string, fn: (rows: Element[]) => unknown) => {
-      // Mock globalThis in the evaluation context
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (globalThis as any).getComputedStyle = vi.fn().mockReturnValue({
-        display: "block",
-        visibility: "visible",
-      });
-
-      try {
-        const tableElement = config.hasThead ? {
-          querySelector: (sel: string) => {
-            if (sel === "thead") {
-              return {
-                querySelectorAll: () =>
-                  config.headers.map((h) => ({ innerText: h, textContent: h })),
-              };
-            }
-            return null;
-          },
-        } : {
-          querySelector: () => null,
-        };
-
-        const headerRow = {
-          closest: (sel: string) => {
-            if (sel === "table") return tableElement;
-            if (sel === "thead") return null; // Header row is NOT in thead (it's a regular tbody row)
-            return null;
-          },
-          querySelectorAll: () => config.headers.map((h) => ({ innerText: h, textContent: h })),
-          hidden: false,
-          hasAttribute: () => false,
-          getClientRects: () => [{}],
-        };
-
-        const dataRows = config.rows.map((cells) => ({
-          querySelectorAll: () => cells.map((text) => ({ innerText: text, textContent: text })),
-          hidden: false,
-          hasAttribute: () => false,
-          getClientRects: () => [{}],
-          closest: (sel: string) => {
-            if (sel === "table") return tableElement;
-            if (sel === "thead") return null; // Data rows are NOT in thead (they're tbody rows)
-            return null;
-          },
-        }));
-
-        // When thead exists, only pass data rows (headers are in thead)
-        // When no thead, pass header row + data rows (first row becomes headers)
-        const allRows = config.hasThead 
-          ? dataRows
-          : [headerRow, ...dataRows];
-
-        return fn(allRows as unknown as Element[]);
-      } finally {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        delete (globalThis as any).getComputedStyle;
-      }
-    }),
-  } as unknown as Page;
-}
-
-function createWorkAllocationLocator(config: {
-  headers: Array<{ text: string; hasButton: boolean }>;
-  rows: Array<Array<{ text: string; hasLink: boolean; ariaHidden?: boolean }>>;
-}): Locator {
-  return {
-    locator: vi.fn().mockImplementation((selector: string) => {
-      if (selector === "thead th") {
-        return {
-          evaluateAll: vi.fn().mockImplementation((fn: (elements: Element[]) => unknown) => {
-            const mockThElements = config.headers.map((h) => {
-              const button = h.hasButton ? { textContent: h.text } : null;
-              return {
-                querySelector: () => button,
-                textContent: h.text,
-              };
-            });
-            return Promise.resolve(fn(mockThElements as unknown as Element[]));
-          }),
-        };
-      }
-      if (selector === "tbody tr") {
-        return {
-          evaluateAll: vi.fn().mockImplementation((fn: (elements: Element[], headers: string[]) => unknown, headers: string[]) => {
-            // Mock globalThis.getComputedStyle for hidden row filtering
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (globalThis as any).getComputedStyle = vi.fn().mockReturnValue({
-              display: "block",
-              visibility: "visible",
-            });
-
-            try {
-              const mockRowElements = config.rows.map((cells) => {
-                const isHidden = cells.some(c => c.ariaHidden);
-                const mockCells = cells.map((cell) => {
-                  const link = cell.hasLink ? { textContent: cell.text } : null;
-                  return {
-                    querySelector: () => link,
-                    textContent: cell.text,
-                  };
-                });
-                return {
-                  getAttribute: (attr: string) => (attr === "aria-hidden" && isHidden) ? "true" : null,
-                  querySelectorAll: () => mockCells,
-                  hidden: false,
-                  hasAttribute: () => false,
-                  getClientRects: () => [{}],
-                };
-              });
-              return Promise.resolve(fn(mockRowElements as unknown as Element[], headers));
-            } finally {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              delete (globalThis as any).getComputedStyle;
-            }
-          }),
-        };
-      }
-      throw new Error(`Unexpected selector: ${selector}`);
-    }),
-  } as unknown as Locator;
-}
-
-// Mock for regression test: full table selector with actual thead rows included
-function createMockDataTableWithActualTheadRows(config: {
-  theadRows: string[][];
-  tbodyRows: string[][];
-}): Page {
-  return {
-    $$eval: vi.fn().mockImplementation((_selector: string, fn: (rows: Element[]) => unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (globalThis as any).getComputedStyle = vi.fn().mockReturnValue({
-        display: "block",
-        visibility: "visible",
-      });
-
-      try {
-        const table = {
-          querySelector: (sel: string) => {
-            if (sel === "thead") {
-              return {
-                exists: true,
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                querySelectorAll: (_selector: string) => {
-                  // Return header cells
-                  return config.theadRows[0]?.map((text) => ({
-                    innerText: text,
-                    textContent: text,
-                  })) || [];
-                },
-              };
-            }
-            return null;
-          },
-        };
-
-        // Create thead rows (these should be filtered out!)
-        const theadRows = config.theadRows.map((cells) => ({
-          querySelectorAll: () => cells.map((text) => ({ innerText: text, textContent: text })),
-          hidden: false,
-          hasAttribute: () => false,
-          getClientRects: () => [{}],
-          closest: (sel: string) => {
-            if (sel === "table") return table;
-            if (sel === "thead") return { exists: true }; // This row is in thead
-            return null;
-          },
-        }));
-
-        // Create tbody rows (these should be returned as data)
-        const tbodyRows = config.tbodyRows.map((cells) => ({
-          querySelectorAll: () => cells.map((text) => ({ innerText: text, textContent: text })),
-          hidden: false,
-          hasAttribute: () => false,
-          getClientRects: () => [{}],
-          closest: (sel: string) => {
-            if (sel === "table") return table;
-            if (sel === "thead") return null; // This row is NOT in thead
-            return null;
-          },
-        }));
-
-        // Simulate real-world: $$eval('#table tr') returns BOTH thead and tbody rows
-        const allRows = [...theadRows, ...tbodyRows];
-
-        return fn(allRows as unknown as Element[]);
-      } finally {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        delete (globalThis as any).getComputedStyle;
-      }
-    }),
-  } as unknown as Page;
-}
-
-// Mock for regression test: hidden rows with CSS (not just aria-hidden)
-function createWorkAllocationLocatorWithHiddenRows(config: {
-  headers: Array<{ text: string; hasButton: boolean }>;
-  rows: Array<{
-    cells: Array<{ text: string; hasLink: boolean }>;
-    hidden: boolean;
-    hiddenType?: "aria" | "display" | "visibility";
-  }>;
-}): Locator {
-  return {
-    locator: vi.fn().mockImplementation((selector: string) => {
-      if (selector === "thead th") {
-        return {
-          evaluateAll: vi.fn().mockImplementation((fn: (elements: Element[]) => unknown) => {
-            const mockThElements = config.headers.map((h) => {
-              const button = h.hasButton ? { textContent: h.text } : null;
-              return {
-                querySelector: () => button,
-                textContent: h.text,
-              };
-            });
-            return Promise.resolve(fn(mockThElements as unknown as Element[]));
-          }),
-        };
-      }
-      if (selector === "tbody tr") {
-        return {
-          evaluateAll: vi.fn().mockImplementation((fn: (elements: Element[], headers: string[]) => unknown, headers: string[]) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (globalThis as any).getComputedStyle = vi.fn().mockImplementation((el: { hiddenType?: string }) => {
-              if (el.hiddenType === "display") {
-                return { display: "none", visibility: "visible" };
-              }
-              if (el.hiddenType === "visibility") {
-                return { display: "block", visibility: "hidden" };
-              }
-              return { display: "block", visibility: "visible" };
-            });
-
-            try {
-              const mockRowElements = config.rows.map((rowConfig) => {
-                const mockCells = rowConfig.cells.map((cell) => {
-                  const link = cell.hasLink ? { textContent: cell.text } : null;
-                  return {
-                    querySelector: () => link,
-                    textContent: cell.text,
-                  };
-                });
-                
-                return {
-                  getAttribute: (attr: string) => {
-                    if (attr === "aria-hidden" && rowConfig.hidden && rowConfig.hiddenType === "aria") {
-                      return "true";
-                    }
-                    return null;
-                  },
-                  querySelectorAll: () => mockCells,
-                  hidden: rowConfig.hidden && rowConfig.hiddenType === "display",
-                  hasAttribute: (attr: string) => {
-                    if (attr === "hidden") return rowConfig.hidden && rowConfig.hiddenType === "display";
-                    return false;
-                  },
-                  getClientRects: () => rowConfig.hidden ? [] : [{}],
-                  hiddenType: rowConfig.hiddenType, // Pass to getComputedStyle mock
-                };
-              });
-              
-              const result = fn(mockRowElements as unknown as Element[], headers);
-              return Promise.resolve(result);
-            } finally {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              delete (globalThis as any).getComputedStyle;
-            }
-          }),
-        };
-      }
-      throw new Error(`Unexpected selector: ${selector}`);
-    }),
-  } as unknown as Locator;
-}
+});
