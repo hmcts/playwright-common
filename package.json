@@ -1,7 +1,7 @@
 {
   "name": "@hmcts/playwright-common",
   "description": "Common library for Playwright tests",
-  "version": "1.1.0",
+  "version": "1.1.1-EXUI-4062-Table-Parser-rc.0",
   "author": "HMCTS",
   "license": "MIT",
   "repository": {
