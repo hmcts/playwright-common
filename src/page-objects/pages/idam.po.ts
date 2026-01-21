@@ -14,14 +14,17 @@ export class IdamPage {
     name: "Sign in or create an account",
   });
   
-  // TODO(IDAM team): Add data-testid="idam-username-input" - prefer test ID over #id
-  readonly usernameInput = this.page.locator("#username");
-  
-  // TODO(IDAM team): Add data-testid="idam-password-input" - prefer test ID over #id
-  readonly passwordInput = this.page.locator("#password");
-  
-  // TODO(IDAM team): Add data-testid="idam-submit-button" - brittle name attribute selector
-  readonly submitBtn = this.page.locator('[name="save"]');
+  readonly usernameInput = this.page.locator(
+    '[data-testid="idam-username-input"], #username, input[name="username"], input[type="email"]'
+  );
+
+  readonly passwordInput = this.page.locator(
+    '[data-testid="idam-password-input"], #password, input[name="password"], input[type="password"]'
+  );
+
+  readonly submitBtn = this.page.locator(
+    '[data-testid="idam-submit-button"], [name="save"], button[type="submit"], input[type="submit"]'
+  );
 
   public async login(user: UserCredentials): Promise<void> {
     await this.usernameInput.fill(user.username);

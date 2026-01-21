@@ -14,22 +14,25 @@ export class ExuiCaseDetailsComponent {
   constructor(public readonly page: Page) {}
 
   // Locators
-  // TODO(rpx-xui-webapp): Add data-testid="case-header" - brittle custom element selector
-  readonly caseHeader = this.page.locator("ccd-case-header");
-  
-  // TODO(rpx-xui-webapp): Add data-testid="case-list-container" - brittle custom element selector
-  readonly caseListContainer = this.page.locator("exui-case-list");
-  
-  // TODO(rpx-xui-webapp): Add data-testid="full-access-container" - brittle custom element selector
-  readonly fullAccessContainer = this.page.locator("ccd-case-full-access-view");
-  
-  // TODO(rpx-xui-webapp): Add data-testid="basic-access-container" - brittle custom element selector
-  readonly basicAccessContainer = this.page.locator("ccd-case-basic-access");
-  
-  // TODO(rpx-xui-webapp): Add data-testid="challenged-access-alert" - brittle text filter
-  readonly challengedAccessMessage = this.page
-    .locator("cut-alert")
-    .filter({ hasText: "This case requires challenged access." });
+  readonly caseHeader = this.page.locator(
+    '[data-testid="case-header"], ccd-case-header'
+  );
+
+  readonly caseListContainer = this.page.locator(
+    '[data-testid="case-list-container"], #search-result'
+  );
+
+  readonly fullAccessContainer = this.page.locator(
+    '[data-testid="full-access-container"], ccd-case-full-access-view#content'
+  );
+
+  readonly basicAccessContainer = this.page.locator(
+    '[data-testid="basic-access-container"], ccd-case-basic-access-view#content'
+  );
+
+  readonly challengedAccessMessage = this.page.locator(
+    '[data-testid="challenged-access-alert"], ccd-case-challenged-access-request cut-alert[type="information"]'
+  );
   
   // ✅ Good: Using ARIA role (acceptable fallback when test ID unavailable)
   readonly requestAccessButton = this.page.getByRole("button", { name: "Request access" });
@@ -45,8 +48,9 @@ export class ExuiCaseDetailsComponent {
     documentsTab: this.page.getByRole("tab", { name: "Case documents" }),
   } as const;
   
-  // TODO(rpx-xui-webapp): Add data-testid="document-field" - brittle custom element selector
-  readonly documentField = this.page.locator("ccd-read-document-field");
+  readonly documentField = this.page.locator(
+    '[data-testid="document-field"], ccd-read-document-field button.govuk-js-link'
+  );
 
   // Constants
   private static readonly CASE_NUMBER_REGEX = /Casenumber:\s*(.+)/i;
