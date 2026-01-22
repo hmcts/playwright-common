@@ -38,6 +38,25 @@ yarn install
 yarn build
 ```
 
+### Local package testing (consume like a published package)
+
+Build and pack the library, then install the tarball in your consuming project:
+
+```bash
+# In playwright-common
+yarn build
+yarn pack -o /tmp/playwright-common.tgz
+
+# In your consuming project
+yarn add -D /tmp/playwright-common.tgz
+```
+
+For local development without packing, you can also use Yarn portal from the consuming project:
+
+```bash
+yarn add -D @hmcts/playwright-common@portal:../playwright-common
+```
+
 ### Mandatory Requirements
 This library is configuration-driven meaning it relies on environment variables or other configuration that must be defined in the consuming test project as this config could be specific to a service or you may be using different environments. You'll need to set up any necessary config such as env vars in your own test project. 
 
@@ -230,6 +249,901 @@ S2S_RETRY_BASE_MS=200
 ```
 
 This uses an exponential backoff with jitter. Set attempts to `1` to disable.
+
+### TableUtils guide
+
+The `TableUtils` class provides robust, production-tested methods to parse various table formats used in HMCTS applications. All methods handle edge cases like hidden rows, sort icons, and whitespace normalization. Empty value cells return empty strings, while rows with empty key/label cells are skipped.
+
+---
+
+## Overview
+
+`TableUtils` offers three specialized table parsing methods plus legacy helpers:
+
+| Method | Use Case | Returns |
+|--------|----------|---------|
+| `parseKeyValueTable` | CCD case details, property lists (2-column: label → value) | `Record<string, string>` |
+| `parseDataTable` | Documents, collections, multi-column tables with headers | `Array<Record<string, string>>` |
+| `parseWorkAllocationTable` | Work allocation tables with sortable headers and links | `Array<Record<string, string>>` |
+| `mapExuiTable` (legacy) | EXUI tables with sort icons | `string[][]` |
+| `mapCitizenTable` (legacy) | Citizen UI tables | `string[][]` |
+
+All methods:
+- ✅ Filter hidden/invisible rows automatically
+- ✅ Remove Unicode sort icons (▼▲↑↓⋀⋁)
+- ✅ Normalize whitespace (trim, collapse multiple spaces)
+- ✅ Execute in browser context (proper DOM access)
+- ✅ Provide detailed error messages with selector context
+
+---
+
+## Method 1: `parseKeyValueTable` – CCD Case Details & Property Lists
+
+### When to Use
+Use this for **2-column tables** where the first column contains labels/keys and subsequent columns contain values:
+- CCD case details tabs
+- Property lists
+- Configuration tables
+- Summary panels
+
+### Signature
+```ts
+parseKeyValueTable(
+  selector: string | Locator,
+  page?: Page
+): Promise<Record<string, string>>
+```
+
+### Basic Example
+```ts
+import { TableUtils } from "@hmcts/playwright-common";
+
+const utils = new TableUtils();
+
+// Parse CCD case details
+const caseDetails = await utils.parseKeyValueTable("#case-details-table", page);
+
+// Access values by label
+expect(caseDetails["Case Reference"]).toBe("1234567890123456");
+expect(caseDetails["Status"]).toBe("Open");
+expect(caseDetails["Case Type"]).toBe("Civil");
+```
+
+### Using Locator (no Page required)
+```ts
+// When you already have a Locator, no need for page
+const detailsLocator = page.locator(".case-viewer ccd-case-view-tab");
+const details = await utils.parseKeyValueTable(detailsLocator);
+
+// Works with chained locators
+const addressDetails = await utils.parseKeyValueTable(
+  page.locator("#address-section").locator("table")
+);
+```
+
+### Handling Multi-Column Values
+When the value spans multiple columns, they're automatically joined with spaces:
+
+```ts
+// HTML structure:
+// | Label        | Value Part 1 | Value Part 2 | Value Part 3 |
+// | Address      | 123 Main St  | London       | SW1A 1AA     |
+
+const data = await utils.parseKeyValueTable("#address-table", page);
+expect(data["Address"]).toBe("123 Main St London SW1A 1AA");
+```
+
+### Sort Icons Are Removed Automatically
+```ts
+// HTML: <td>Case Reference ▼</td>
+// Result: "Case Reference" (sort icon removed)
+
+const data = await utils.parseKeyValueTable("#sorted-table", page);
+expect(data["Case Reference"]).not.toContain("▼");
+expect(data["Status"]).not.toContain("▲");
+```
+
+### Edge Cases Handled
+
+**Empty value cells return empty string (keys must have content):**
+```ts
+// Table with empty value:
+// | Label        | Value  |
+// | Case Ref     | 12345  |  ← valid (key + value)
+// | Note         |        |  ← valid (key present, empty value returns "")
+// |              | Data   |  ← skipped (empty key)
+
+const data = await utils.parseKeyValueTable("#table", page);
+expect(data["Case Ref"]).toBe("12345");
+expect(data["Note"]).toBe(""); // Empty value cells return empty string
+expect(data[""]).toBeUndefined(); // Rows with empty keys are skipped
+```
+
+**Empty or single-column rows are skipped:**
+```ts
+// Table with invalid rows:
+// | Case Reference | 12345 |  ← valid (2+ columns)
+// | Empty Row      |        ← skipped (only 1 column)
+// |                |        ← skipped (empty key)
+// | Status         | Open | ← valid
+
+const data = await utils.parseKeyValueTable("#table", page);
+// Only returns valid rows with non-empty keys
+expect(Object.keys(data)).toEqual(["Case Reference", "Status"]);
+```
+
+**Hidden rows are filtered:**
+```ts
+// Rows with display:none, visibility:hidden, hidden attribute,
+// or zero client rects are automatically excluded
+const data = await utils.parseKeyValueTable("#table", page);
+// Only visible rows appear in result
+```
+
+### Error Handling
+```ts
+// ❌ Missing page parameter for string selector
+await utils.parseKeyValueTable("#table");
+// Throws: "Page instance required for string selectors"
+
+// ❌ Empty selector
+await utils.parseKeyValueTable("", page);
+// Throws: "Selector cannot be empty"
+
+// ❌ Page crashes during evaluation
+await utils.parseKeyValueTable("#table", crashedPage);
+// Throws: "Failed to evaluate table (#table): Target page, context or browser has been closed"
+```
+
+### Complete Working Example
+```ts
+import { test, expect } from "@playwright/test";
+import { TableUtils } from "@hmcts/playwright-common";
+
+test("verify case details from CCD table", async ({ page }) => {
+  const utils = new TableUtils();
+  
+  await page.goto("/case/1234567890123456");
+  await page.click('text="Case Details"'); // Open tab
+  
+  const details = await utils.parseKeyValueTable(
+    "#case-details-table tbody",
+    page
+  );
+  
+  // Assert expected values
+  expect(details["Case Reference"]).toBe("1234567890123456");
+  expect(details["Applicant Name"]).toContain("John Doe");
+  expect(details["Submission Date"]).toMatch(/\d{2}\/\d{2}\/\d{4}/);
+  
+  // Log all extracted data
+  console.log("Case Details:", JSON.stringify(details, null, 2));
+});
+```
+
+---
+
+## Method 2: `parseDataTable` – Multi-Column Tables with Headers
+
+### When to Use
+Use this for **multi-column data tables** with headers:
+- Document lists
+- Flag collections
+- Party lists
+- Order tables
+- Any table where each row represents a data record
+
+### Signature
+```ts
+parseDataTable(
+  selector: string | Locator,
+  page?: Page
+): Promise<Array<Record<string, string>>>
+```
+
+### Basic Example with `<thead>`
+```ts
+const utils = new TableUtils();
+
+// Parse document table (has <thead> element)
+// Note: <thead> rows are automatically excluded from data
+const documents = await utils.parseDataTable("#documents-table", page);
+
+// Result is array of objects, one per data row
+expect(documents).toHaveLength(3);
+expect(documents[0]).toEqual({
+  "Document Name": "Application.pdf",
+  "Upload Date": "2025-01-15",
+  "Uploaded By": "John Doe",
+  "Status": "Verified"
+});
+
+// Access individual rows
+const firstDoc = documents[0];
+expect(firstDoc["Document Name"]).toBe("Application.pdf");
+
+// Filter results
+const pendingDocs = documents.filter(d => d["Status"] === "Pending");
+```
+
+### Tables Without `<thead>` (First Row as Headers)
+```ts
+// When table lacks <thead>, first row becomes headers
+// HTML:
+// <tr><td>Name</td><td>Role</td><td>Email</td></tr>
+// <tr><td>Alice</td><td>Admin</td><td>alice@hmcts.net</td></tr>
+// <tr><td>Bob</td><td>User</td><td>bob@hmcts.net</td></tr>
+
+const users = await utils.parseDataTable("#users-table", page);
+
+// First data row uses first row values as headers
+expect(users).toEqual([
+  { Name: "Alice", Role: "Admin", Email: "alice@hmcts.net" },
+  { Name: "Bob", Role: "User", Email: "bob@hmcts.net" }
+]);
+```
+
+### Fallback Column Names for Missing Headers
+```ts
+// When headers are empty or missing, generates column_N
+// HTML: <thead><tr><th>Name</th><th></th><th>Status</th></tr></thead>
+
+const data = await utils.parseDataTable("#table", page);
+
+expect(data[0]).toEqual({
+  "Name": "Alice",
+  "column_2": "alice@hmcts.net",  // ← fallback for empty header
+  "Status": "Active"
+});
+```
+
+### Sort Icons Removed from Headers and Cells
+```ts
+// Headers: "Document Name ▼" → "Document Name"
+// Cells: "Application.pdf ↑" → "Application.pdf"
+
+const docs = await utils.parseDataTable("#sorted-table", page);
+expect(docs[0]["Document Name"]).not.toContain("▼");
+```
+
+### Whitespace Normalization
+```ts
+// HTML:
+// <td>  Alice   Smith  </td>  (multiple spaces)
+// <td>
+//   Bob
+//   Jones
+// </td>  (newlines and tabs)
+
+const data = await utils.parseDataTable("#table", page);
+
+// All whitespace normalized to single spaces
+expect(data[0]["Name"]).toBe("Alice Smith");
+expect(data[1]["Name"]).toBe("Bob Jones");
+```
+
+### Edge Cases Handled
+
+**Empty tables return empty array:**
+```ts
+const empty = await utils.parseDataTable("#empty-table", page);
+expect(empty).toEqual([]);
+```
+
+**Hidden rows excluded:**
+```ts
+// Table with 5 rows, but 2 hidden (display:none)
+const visible = await utils.parseDataTable("#table", page);
+expect(visible).toHaveLength(3); // Only visible rows
+```
+
+**Rows with no cells skipped:**
+```ts
+// Empty <tr></tr> rows are automatically filtered
+```
+
+### Practical Examples
+
+**Document verification test:**
+```ts
+test("verify all required documents uploaded", async ({ page }) => {
+  const utils = new TableUtils();
+  
+  await page.goto("/case/1234567890123456/documents");
+  
+  const docs = await utils.parseDataTable("#documents-table", page);
+  
+  const requiredDocs = [
+    "Application Form",
+    "Proof of Identity",
+    "Supporting Evidence"
+  ];
+  
+  for (const required of requiredDocs) {
+    const found = docs.find(d => d["Document Name"] === required);
+    expect(found, `Missing required document: ${required}`).toBeDefined();
+    expect(found?.["Status"]).toBe("Verified");
+  }
+});
+```
+
+**Extract specific columns:**
+```ts
+test("extract all document URLs", async ({ page }) => {
+  const utils = new TableUtils();
+  
+  const docs = await utils.parseDataTable("#documents-table", page);
+  
+  // Extract just the URLs column
+  const urls = docs.map(row => row["Download Link"]);
+  
+  // Verify all URLs valid
+  for (const url of urls) {
+    expect(url).toMatch(/^https:\/\/dm-store/);
+  }
+});
+```
+
+**Dynamic column access:**
+```ts
+test("flexible table parsing", async ({ page }) => {
+  const utils = new TableUtils();
+  
+  const table = await utils.parseDataTable(".case-table", page);
+  
+  // Get all column names dynamically
+  const headers = Object.keys(table[0] || {});
+  console.log("Table columns:", headers);
+  
+  // Find column containing "Date"
+  const dateColumn = headers.find(h => h.includes("Date"));
+  if (dateColumn) {
+    const dates = table.map(row => row[dateColumn]);
+    console.log("All dates:", dates);
+  }
+});
+```
+
+**Combine with Playwright assertions:**
+```ts
+import { expect } from "@playwright/test";
+
+test("verify party details", async ({ page }) => {
+  const utils = new TableUtils();
+  
+  const parties = await utils.parseDataTable("#parties-table", page);
+  
+  // Use Playwright's rich assertions
+  await expect(parties).toHaveLength(2);
+  
+  const applicant = parties.find(p => p["Party Type"] === "Applicant");
+  await expect(applicant?.["Name"]).toBeTruthy();
+  await expect(applicant?.["Legal Rep"]).toContain("Solicitors");
+});
+```
+
+---
+
+## Method 3: `parseWorkAllocationTable` – Work Allocation & Task Tables
+
+### When to Use
+Use this for **work allocation tables** with:
+- Sortable headers (buttons inside `<th>`)
+- Clickable cells (links inside `<td>`)
+- ARIA hidden rows
+- Performance-sensitive scenarios (uses parallel processing)
+
+Common in:
+- Work allocation queues
+- Task lists
+- Case assignment tables
+- MyWork dashboards
+
+### Signature
+```ts
+parseWorkAllocationTable(
+  tableLocator: Locator
+): Promise<Array<Record<string, string>>>
+```
+
+⚠️ **Note:** Unlike other methods, this **only accepts Locator** (not string selector).
+
+### Basic Example
+```ts
+const utils = new TableUtils();
+
+// Must use Locator (not string selector)
+const tasks = await utils.parseWorkAllocationTable(
+  page.locator("#work-allocation-table")
+);
+
+expect(tasks[0]).toEqual({
+  "Case Reference": "1234567890123456",
+  "Task": "Review application",
+  "Assignee": "John Doe",
+  "Priority": "High",
+  "Due Date": "2025-01-25"
+});
+```
+
+### Extracts Text from Buttons in Headers
+```ts
+// HTML header structure:
+// <thead>
+//   <tr>
+//     <th><button>Case Reference ▼</button></th>
+//     <th><button>Task</button></th>
+//   </tr>
+// </thead>
+
+const tasks = await utils.parseWorkAllocationTable(table);
+
+// Headers extracted from button text, sort icons removed
+const firstTask = tasks[0];
+expect(Object.keys(firstTask)).toContain("Case Reference");
+expect(Object.keys(firstTask)).not.toContain("Case Reference ▼");
+```
+
+### Extracts Text from Links in Cells
+```ts
+// HTML cell structure:
+// <td><a href="/case/12345">1234567890123456</a></td>
+// <td><a href="/task/67890">Review application</a></td>
+
+const tasks = await utils.parseWorkAllocationTable(table);
+
+// Link text extracted, not href
+expect(tasks[0]["Case Reference"]).toBe("1234567890123456");
+expect(tasks[0]["Task"]).toBe("Review application");
+```
+
+### Hidden Rows Excluded (Comprehensive Filtering)
+```ts
+// Filters out rows that are hidden by multiple mechanisms:
+// - aria-hidden="true"
+// - display: none (CSS)
+// - visibility: hidden (CSS)
+// - hidden attribute
+// - Zero client rects (not rendered)
+
+// HTML:
+// <tr><td>Task 1</td></tr>  ← included
+// <tr aria-hidden="true"><td>Loading...</td></tr>  ← excluded
+// <tr style="display:none"><td>Hidden</td></tr>  ← excluded
+// <tr style="visibility:hidden"><td>Invisible</td></tr>  ← excluded
+// <tr hidden><td>Template</td></tr>  ← excluded
+// <tr><td>Task 2</td></tr>  ← included
+
+const tasks = await utils.parseWorkAllocationTable(table);
+expect(tasks).toHaveLength(2); // Only visible rows included
+```
+
+### Sort Icons Removed from Headers and Cells
+```ts
+// Removes all common sort indicator icons: ▼▲↑↓⋀⋁
+// HTML: <button>Case Reference ▼</button>
+// Result: "Case Reference"
+
+const tasks = await utils.parseWorkAllocationTable(table);
+expect(Object.keys(tasks[0])[0]).toBe("Case Reference");
+expect(Object.keys(tasks[0])[0]).not.toContain("▼");
+```
+
+### Empty Headers Get Fallback Names
+```ts
+// When header button is empty or just whitespace
+// HTML: <th><button>  </button></th>
+
+const tasks = await utils.parseWorkAllocationTable(table);
+
+// Empty header becomes "column_1", "column_2", etc.
+expect(tasks[0]).toHaveProperty("column_1");
+```
+
+### Whitespace Normalization
+```ts
+// Trims and collapses multiple spaces into single spaces
+// HTML: <td>  Multiple   Spaces   Here  </td>
+// Result: "Multiple Spaces Here"
+
+const tasks = await utils.parseWorkAllocationTable(table);
+expect(tasks[0]["Task"]).toBe("Review application"); // No extra spaces
+```
+
+### Practical Examples
+
+**Find tasks assigned to specific user:**
+```ts
+test("verify tasks assigned to me", async ({ page }) => {
+  const utils = new TableUtils();
+  
+  await page.goto("/work/my-work");
+  
+  const tasks = await utils.parseWorkAllocationTable(
+    page.locator(".work-allocation-table")
+  );
+  
+  const myTasks = tasks.filter(t => t["Assignee"] === "John Doe");
+  
+  expect(myTasks.length).toBeGreaterThan(0);
+  expect(myTasks[0]["Task"]).toBeDefined();
+});
+```
+
+**Check priority distribution:**
+```ts
+test("verify high priority tasks", async ({ page }) => {
+  const utils = new TableUtils();
+  
+  const tasks = await utils.parseWorkAllocationTable(
+    page.locator("#tasks-table")
+  );
+  
+  const priorities = tasks.reduce((acc, task) => {
+    const priority = task["Priority"] || "Unknown";
+    acc[priority] = (acc[priority] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  console.log("Priority breakdown:", priorities);
+  expect(priorities["High"]).toBeGreaterThan(0);
+});
+```
+
+**Extract case references for bulk operations:**
+```ts
+test("extract all case references from work queue", async ({ page }) => {
+  const utils = new TableUtils();
+  
+  const tasks = await utils.parseWorkAllocationTable(
+    page.locator(".work-table")
+  );
+  
+  const caseRefs = tasks
+    .map(t => t["Case Reference"])
+    .filter(ref => ref && ref.length === 16);
+  
+  console.log(`Found ${caseRefs.length} cases in queue`);
+  
+  // Use for bulk API operations
+  for (const caseRef of caseRefs) {
+    // await apiClient.get(`/cases/${caseRef}`);
+  }
+});
+```
+
+---
+
+## Error Handling & Troubleshooting
+
+### Common Errors and Solutions
+
+**Error: "Page instance required for string selectors"**
+```ts
+// ❌ Wrong: string selector without page
+await utils.parseKeyValueTable("#table");
+
+// ✅ Correct: provide page parameter
+await utils.parseKeyValueTable("#table", page);
+
+// ✅ Or use Locator (no page needed)
+await utils.parseKeyValueTable(page.locator("#table"));
+```
+
+**Error: "Selector cannot be empty"**
+```ts
+// ❌ Wrong: empty or whitespace-only selector
+await utils.parseDataTable("   ", page);
+
+// ✅ Correct: valid CSS selector
+await utils.parseDataTable("#documents-table", page);
+```
+
+**Error: "Failed to evaluate table: Target page has been closed"**
+```ts
+// Page was closed/crashed during evaluation
+// Solutions:
+// 1. Ensure page is still open
+// 2. Add navigation waits before table parsing
+// 3. Use page.waitForLoadState() before parsing
+
+await page.goto("/documents");
+await page.waitForLoadState("domcontentloaded");
+await utils.parseDataTable("#table", page);
+```
+
+**Error: "Failed to evaluate table: Execution context was destroyed"**
+```ts
+// Page navigated away during table parsing
+// Solutions:
+// 1. Ensure table exists before parsing
+// 2. Use waitForSelector to confirm table loaded
+// 3. Disable auto-navigation during test
+
+await page.waitForSelector("#documents-table");
+const docs = await utils.parseDataTable("#documents-table", page);
+```
+
+### Debugging Tips
+
+**Log extracted data structure:**
+```ts
+const data = await utils.parseDataTable("#table", page);
+console.log("Parsed table:", JSON.stringify(data, null, 2));
+```
+
+**Verify table HTML before parsing:**
+```ts
+const tableHtml = await page.locator("#table").innerHTML();
+console.log("Table HTML:", tableHtml);
+```
+
+**Check for hidden rows:**
+```ts
+// Count total rows vs visible rows
+const totalRows = await page.locator("#table tr").count();
+const data = await utils.parseDataTable("#table", page);
+console.log(`Total rows: ${totalRows}, Visible rows: ${data.length}`);
+```
+
+**Inspect specific cells:**
+```ts
+const cells = await page.locator("#table tr:first-child td").allTextContents();
+console.log("First row cells:", cells);
+```
+
+---
+
+## Advanced Patterns
+
+### Comparing Tables Across Pages
+```ts
+test("verify document list consistency", async ({ page }) => {
+  const utils = new TableUtils();
+  
+  // Extract from page 1
+  await page.goto("/case/12345/documents?page=1");
+  const page1Docs = await utils.parseDataTable("#docs-table", page);
+  
+  // Extract from page 2
+  await page.goto("/case/12345/documents?page=2");
+  const page2Docs = await utils.parseDataTable("#docs-table", page);
+  
+  // Verify no duplicates
+  const allNames = [...page1Docs, ...page2Docs].map(d => d["Document Name"]);
+  const uniqueNames = new Set(allNames);
+  expect(allNames.length).toBe(uniqueNames.size);
+});
+```
+
+### Conditional Parsing Based on Table Type
+```ts
+test("parse any HMCTS table dynamically", async ({ page }) => {
+  const utils = new TableUtils();
+  const table = page.locator(".case-table");
+  
+  // Detect table type
+  const hasTheadButton = await table.locator("thead button").count() > 0;
+  const columnCount = await table.locator("tr:first-child td, tr:first-child th").count();
+  
+  let data;
+  if (hasTheadButton) {
+    // Work allocation table
+    data = await utils.parseWorkAllocationTable(table);
+  } else if (columnCount === 2) {
+    // Key-value table
+    data = await utils.parseKeyValueTable(table);
+  } else {
+    // Multi-column data table
+    data = await utils.parseDataTable(table);
+  }
+  
+  console.log("Parsed data:", data);
+});
+```
+
+### Filtering and Transformation Pipeline
+```ts
+test("complex table data pipeline", async ({ page }) => {
+  const utils = new TableUtils();
+  
+  const docs = await utils.parseDataTable("#documents-table", page);
+  
+  const processedDocs = docs
+    .filter(d => d["Status"] === "Verified")
+    .filter(d => d["Document Type"] === "Evidence")
+    .map(d => ({
+      name: d["Document Name"],
+      date: new Date(d["Upload Date"]),
+      uploadedBy: d["Uploaded By"]
+    }))
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
+  
+  expect(processedDocs).toHaveLength(3);
+  expect(processedDocs[0].date.getTime()).toBeGreaterThan(
+    processedDocs[1].date.getTime()
+  );
+});
+```
+
+### Retrying Table Parsing on Dynamic Content
+```ts
+import { expect } from "@playwright/test";
+
+test("parse table after dynamic load", async ({ page }) => {
+  const utils = new TableUtils();
+  
+  await page.goto("/case/12345/documents");
+  
+  // Wait for table to populate (not just appear)
+  await expect(async () => {
+    const docs = await utils.parseDataTable("#documents-table", page);
+    expect(docs.length).toBeGreaterThan(0);
+  }).toPass({ timeout: 10000 });
+  
+  // Now parse with confidence
+  const docs = await utils.parseDataTable("#documents-table", page);
+  expect(docs[0]["Document Name"]).toBeTruthy();
+});
+```
+
+---
+
+## Legacy Methods
+
+### `mapExuiTable` – EXUI Table Mapper
+
+**Use for legacy EXUI-style tables.** Returns 2D array (rows × columns).
+
+```ts
+const rows = await utils.mapExuiTable(page.locator("#exui-table"));
+
+// Result: string[][]
+expect(rows[0]).toEqual(["Header1", "Header2", "Header3"]);
+expect(rows[1]).toEqual(["Value1", "Value2", "Value3"]);
+
+// Sort icons removed from headers
+expect(rows[0][0]).not.toContain("▼");
+```
+
+### `mapCitizenTable` – Citizen UI Table Mapper
+
+**Use for Citizen UI tables.** Returns 2D array.
+
+```ts
+const rows = await utils.mapCitizenTable(page.locator(".citizen-table"));
+
+// Result: string[][]
+const headers = rows[0];
+const firstDataRow = rows[1];
+```
+
+⚠️ **Migration Recommendation:** For new tests, prefer `parseDataTable` which returns structured objects instead of 2D arrays.
+
+---
+
+## Best Practices
+
+### ✅ Do
+
+1. **Use Locators when possible** (no Page parameter needed):
+   ```ts
+   const data = await utils.parseDataTable(page.locator("#table"));
+   ```
+
+2. **Wait for table to be visible** before parsing:
+   ```ts
+   await page.waitForSelector("#documents-table");
+   const docs = await utils.parseDataTable("#documents-table", page);
+   ```
+
+3. **Handle empty tables gracefully**:
+   ```ts
+   const docs = await utils.parseDataTable("#table", page);
+   if (docs.length === 0) {
+     console.log("No documents found");
+   }
+   ```
+
+4. **Log parsed data during development**:
+   ```ts
+   const data = await utils.parseDataTable("#table", page);
+   console.log(JSON.stringify(data, null, 2));
+   ```
+
+5. **Use TypeScript for type safety**:
+   ```ts
+   interface Document {
+     "Document Name": string;
+     "Upload Date": string;
+     "Status": string;
+   }
+   
+   const docs = await utils.parseDataTable("#docs", page) as Document[];
+   ```
+
+### ❌ Don't
+
+1. **Don't parse tables during navigation**:
+   ```ts
+   // ❌ Wrong: race condition
+   await page.click('text="Documents"');
+   const docs = await utils.parseDataTable("#table", page); // May fail
+   
+   // ✅ Correct: wait for stability
+   await page.click('text="Documents"');
+   await page.waitForLoadState("networkidle");
+   const docs = await utils.parseDataTable("#table", page);
+   ```
+
+2. **Don't use parseWorkAllocationTable with string selectors**:
+   ```ts
+   // ❌ Wrong: only accepts Locator
+   await utils.parseWorkAllocationTable("#work-table");
+   
+   // ✅ Correct: use Locator
+   await utils.parseWorkAllocationTable(page.locator("#work-table"));
+   ```
+
+3. **Don't assume column names** – always check dynamically:
+   ```ts
+   const data = await utils.parseDataTable("#table", page);
+   if (data.length > 0) {
+     const columns = Object.keys(data[0]);
+     console.log("Available columns:", columns);
+   }
+   ```
+
+4. **Don't ignore errors** – wrap in try/catch for robustness:
+   ```ts
+   try {
+     const data = await utils.parseDataTable("#table", page);
+   } catch (error) {
+     console.error("Failed to parse table:", error);
+     throw error;
+   }
+   ```
+
+---
+
+## Performance Considerations
+
+- **parseKeyValueTable**: Fast, processes rows sequentially in browser context
+- **parseDataTable**: Fast, single browser evaluation with atomic DOM access
+- **parseWorkAllocationTable**: Fast, single browser evaluation with atomic DOM access
+- All methods execute in browser context – no multiple round-trips
+
+**For large tables (100+ rows):**
+```ts
+// Measure parsing time
+const start = Date.now();
+const data = await utils.parseDataTable("#large-table", page);
+console.log(`Parsed ${data.length} rows in ${Date.now() - start}ms`);
+```
+
+Typical performance: **< 100ms for tables with < 50 rows**
+
+---
+
+## Summary
+
+| Need | Use Method | Key Feature |
+|------|-----------|-------------|
+| CCD case details | `parseKeyValueTable` | Returns `Record<string, string>` (key → value) |
+| Document lists | `parseDataTable` | Returns `Array<Record<string, string>>` (rows) |
+| Work allocation | `parseWorkAllocationTable` | Handles buttons/links, comprehensive hidden row filtering |
+| Legacy EXUI tables | `mapExuiTable` | Returns `string[][]` |
+| Legacy Citizen tables | `mapCitizenTable` | Returns `string[][]` |
+
+**All methods automatically handle:**
+- ✅ Hidden row filtering (display:none, visibility:hidden, aria-hidden, hidden attribute)
+- ✅ Sort icon removal (▼▲↑↓⋀⋁)
+- ✅ Whitespace normalization (trim + collapse multiple spaces)
+- ✅ Empty value cells (return empty string)
+- ✅ Empty key cells (rows skipped)
+- ✅ Detailed error messages
+
+For questions or issues, see [CONTRIBUTING.md](CONTRIBUTING.md) or raise an issue on GitHub.
 
 ### Coverage utilities
 Parse `coverage-summary.json` from c8/Istanbul and produce text + table-ready rows you can inject into reports or publish as build artefacts.
