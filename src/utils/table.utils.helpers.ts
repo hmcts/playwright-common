@@ -53,6 +53,52 @@ export function looksLikeSelectionCellText(text: string): boolean {
   return trimmed === "" || trimmed === "☐" || trimmed === "☑";
 }
 
+function ensureRowArrays(
+  grid: string[][],
+  occupied: boolean[][],
+  rowIndex: number
+): void {
+  grid[rowIndex] ??= [];
+  occupied[rowIndex] ??= [];
+}
+
+function fillGridCell(
+  grid: string[][],
+  occupied: boolean[][],
+  rowIndex: number,
+  colIndex: number,
+  cell: TableCellSnapshot
+): number {
+  let currentCol = colIndex;
+  const occupiedRow = occupied[rowIndex];
+  if (occupiedRow) {
+    while (occupiedRow[currentCol]) currentCol++;
+  }
+
+  const text = cleanTableText(cell.rawText);
+  const colSpan = Math.max(cell.colSpan || 1, 1);
+  const rowSpan = Math.max(cell.rowSpan || 1, 1);
+
+  for (let r = 0; r < rowSpan; r++) {
+    const targetRow = rowIndex + r;
+    grid[targetRow] ??= [];
+    occupied[targetRow] ??= [];
+    for (let c = 0; c < colSpan; c++) {
+      const targetCol = currentCol + c;
+      const gridRow = grid[targetRow];
+      if (gridRow && !gridRow[targetCol]) {
+        gridRow[targetCol] = text;
+      }
+      const occupiedTargetRow = occupied[targetRow];
+      if (occupiedTargetRow) {
+        occupiedTargetRow[targetCol] = true;
+      }
+    }
+  }
+
+  return currentCol + colSpan;
+}
+
 function buildHeaderGrid(
   headerRows: TableRowSnapshot[]
 ): { grid: string[][]; maxColumns: number } {
@@ -61,30 +107,11 @@ function buildHeaderGrid(
   let maxColumns = 0;
 
   headerRows.forEach((row, rowIndex) => {
-    if (!grid[rowIndex]) grid[rowIndex] = [];
-    if (!occupied[rowIndex]) occupied[rowIndex] = [];
+    ensureRowArrays(grid, occupied, rowIndex);
     let colIndex = 0;
 
     for (const cell of row.cells) {
-      while (occupied[rowIndex][colIndex]) colIndex++;
-
-      const text = cleanTableText(cell.rawText);
-      const colSpan = Math.max(cell.colSpan || 1, 1);
-      const rowSpan = Math.max(cell.rowSpan || 1, 1);
-
-      for (let r = 0; r < rowSpan; r++) {
-        const targetRow = rowIndex + r;
-        if (!grid[targetRow]) grid[targetRow] = [];
-        if (!occupied[targetRow]) occupied[targetRow] = [];
-        for (let c = 0; c < colSpan; c++) {
-          const targetCol = colIndex + c;
-          if (!grid[targetRow][targetCol]) {
-            grid[targetRow][targetCol] = text;
-          }
-          occupied[targetRow][targetCol] = true;
-        }
-      }
-      colIndex += colSpan;
+      colIndex = fillGridCell(grid, occupied, rowIndex, colIndex, cell);
       maxColumns = Math.max(maxColumns, colIndex);
     }
   });
@@ -100,8 +127,8 @@ export function buildHeaderKeys(headerRows: TableRowSnapshot[]): string[] {
 
   for (let col = 0; col < maxColumns; col++) {
     const parts: string[] = [];
-    for (let row = 0; row < grid.length; row++) {
-      const part = grid[row]?.[col];
+    for (const row of grid) {
+      const part = row?.[col];
       if (part && !parts.includes(part)) {
         parts.push(part);
       }
