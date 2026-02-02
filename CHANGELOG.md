@@ -3,6 +3,30 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1]
+### Added
+- `TableUtils.parseKeyValueTable()` - Parse 2-column key-value tables (CCD case details tabs with label-value pairs)
+- `TableUtils.parseDataTable()` - Parse multi-column tables with headers (collections, documents, flags tables)
+- `TableUtils.parseWorkAllocationTable()` - Parse work allocation tables with sortable headers (handles buttons in headers, links in cells)
+- Test coverage for tables with selection checkboxes and action buttons in data cells
+- `tests/utils/table.utils.test-helpers.ts` - Extracted 450+ lines of test helper functions for better maintainability
+
+### Changed
+- Enhanced error messages in table parsing utilities to include selector context
+- Replaced `window` with `globalThis` for better cross-environment compatibility
+- Updated table parsing to use `replaceAll()` for modern string replacement
+- Refactored test file structure: extracted 6 mock helper functions to separate test-helpers file
+
+### Fixed
+- **CRITICAL:** `parseDataTable` now correctly excludes `<thead>` rows when using full table selectors (e.g., `#documents-table`). Previously, header rows were incorrectly returned as data rows.
+- `parseKeyValueTable` now allows empty value cells (returns empty string) instead of throwing errors. Key cells still require content.
+- `parseWorkAllocationTable` now implements all documented features: sort icon removal, whitespace normalization, column_N fallback keys for empty headers, and comprehensive hidden row filtering (display:none, visibility:hidden, aria-hidden, hidden attribute)
+
+### Confirmed
+- All table parsers correctly handle checkboxes and action buttons in data cells (extracted as text content)
+- Selection checkboxes (☐/☑) in first column are preserved in parsed data
+- Action buttons ("Edit", "Assign", "View") in cells are extracted as text values
+
 ## [1.1.0]
 #### CI changes
 - Updated npm publishing to use **Trusted Publishing (OIDC)** (no long-lived npm tokens).
@@ -160,7 +184,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.1.0]: https://github.com/hmcts/playwright-common/compare/v1.1.0...HEAD
+[1.1.1]: https://github.com/hmcts/playwright-common/compare/v1.1.1...HEAD
+[1.1.0]: https://github.com/hmcts/playwright-common/compare/v1.1.0...v1.1.1
 [1.0.39]: https://github.com/hmcts/playwright-common/compare/v1.0.39...v1.1.0
 [1.0.38]: https://github.com/hmcts/playwright-common/compare/v1.0.38...v1.0.39
 [1.0.37]: https://github.com/hmcts/playwright-common/compare/v1.0.37...v1.0.38
