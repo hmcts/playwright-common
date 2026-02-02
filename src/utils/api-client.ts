@@ -146,7 +146,7 @@ export class ApiClient {
 
   constructor(options?: ApiClientOptions) {
     this.baseUrl = options?.baseUrl;
-    this.defaultHeaders = { ...(options?.defaultHeaders ?? {}) };
+    this.defaultHeaders = options?.defaultHeaders ?? {};
     this.requestFactory =
       options?.requestFactory ?? (() => request.newContext());
     this.name = options?.name ?? "api-client";
@@ -262,26 +262,8 @@ export class ApiClient {
     path: string,
     options?: ApiRequestOptions
   ): Promise<ApiResponsePayload<T>> {
-    if (this.breaker && !this.breaker.canProceed()) {
-      const err = new ApiClientError(
-        "Circuit open: request blocked",
-        503,
-        {
-          id: randomUUID(),
-          name: this.name,
-          method,
-          url: this.buildUrl(path),
-          status: 503,
-          ok: false,
-          timestamp: new Date().toISOString(),
-          durationMs: 0,
-          request: {},
-          response: {},
-        }
-      );
-      this.onError?.(err);
-      throw err;
-    }
+    this.checkCircuitBreaker(method, path);
+    
     const context = await this.getContext();
     const requestHeaders = {
       ...this.defaultHeaders,
@@ -293,23 +275,7 @@ export class ApiClient {
       options?.correlationId ?? this.globalCorrelationId ?? randomUUID();
     const startTime = Date.now();
 
-    type FetchOptions = Parameters<APIRequestContext["fetch"]>[1];
-    const effectiveTimeout = options?.timeoutMs ?? 30_000;
-    let requestOptions: FetchOptions = {
-      method,
-      headers: requestHeaders,
-      timeout: effectiveTimeout,
-    };
-    const builtParams = this.buildParams(options?.query);
-    if (builtParams !== undefined) {
-      requestOptions = { ...requestOptions, params: builtParams };
-    }
-    if (options?.data !== undefined) {
-      requestOptions = { ...requestOptions, data: options.data };
-    }
-    if (options?.form !== undefined) {
-      requestOptions = { ...requestOptions, form: options.form };
-    }
+    const requestOptions = this.buildRequestOptions(method, requestHeaders, options);
     const response = await this.safeFetch(context, url, requestOptions, {
       method,
       correlationId,
@@ -324,67 +290,20 @@ export class ApiClient {
 
     const rawBody = await safeReadBody(response);
     const parsedBody = parseBody<T>(rawBody, options?.responseType);
-    const sanitisedRequestHeaders = sanitiseHeaders(
-      requestHeaders,
-      this.redactionState
-    );
-    const sanitisedResponseHeaders = sanitiseHeaders(
-      responseHeaders,
-      this.redactionState
-    );
-    const sanitisedRequestData = sanitiseValue<unknown>(
-      options?.data,
-      this.redactionState
-    );
-    const sanitisedForm = sanitiseValue<Record<string, string> | undefined>(
-      options?.form,
-      this.redactionState
-    );
-    const sanitisedQuery = sanitiseValue<Record<string, QueryParamValue> | undefined>(
-      options?.query,
-      this.redactionState
-    );
-    const sanitisedResponseBody: unknown = sanitiseValue(
-      parsedBody,
-      this.redactionState,
-      "responseBody"
-    );
-
-    const requestLog: ApiLogEntry["request"] = {};
-    if (sanitisedRequestHeaders) {
-      requestLog.headers = sanitisedRequestHeaders;
-    }
-    if (sanitisedRequestData !== undefined) {
-      requestLog.data = sanitisedRequestData;
-    }
-    if (sanitisedForm !== undefined) {
-      requestLog.form = sanitisedForm;
-    }
-    if (sanitisedQuery !== undefined) {
-      requestLog.query = sanitisedQuery;
-    }
-
-    const responseLog: ApiLogEntry["response"] = {};
-    if (sanitisedResponseHeaders) {
-      responseLog.headers = sanitisedResponseHeaders;
-    }
-    if (sanitisedResponseBody !== undefined) {
-      responseLog.body = sanitisedResponseBody;
-    }
-
-    const logEntry: ApiLogEntry = {
-      id: randomUUID(),
-      name: this.name,
+    
+    const logEntry = this.buildLogEntry({
       method,
-      url: sanitiseUrl(url, this.redactionState),
+      url,
       status,
       ok,
-      timestamp: new Date(startTime).toISOString(),
+      startTime,
       durationMs,
       correlationId,
-      request: requestLog,
-      response: responseLog,
-    };
+      requestHeaders,
+      responseHeaders,
+      options,
+      parsedBody,
+    });
     if (this.captureRawBodies) {
       const rawReq: NonNullable<ApiLogEntry["rawRequest"]> = {};
       if (options?.data !== undefined) rawReq.data = options.data;
@@ -412,34 +331,7 @@ export class ApiClient {
     this.onResponse?.(logEntry);
 
     if (!ok && options?.throwOnError !== false) {
-      const retryAfterMs = parseRetryAfter(responseHeaders["retry-after"]);
-      const bodyPreview = buildBodyPreview(sanitisedResponseBody);
-      const errorMeta: {
-        bodyPreview?: string;
-        endpointPath?: string;
-        elapsedMs?: number;
-        correlationId?: string;
-        retryAfterMs?: number;
-      } = {
-        endpointPath: path,
-        elapsedMs: durationMs,
-        correlationId,
-      };
-      if (retryAfterMs !== undefined) {
-        errorMeta.retryAfterMs = retryAfterMs;
-      }
-      if (bodyPreview !== undefined) {
-        errorMeta.bodyPreview = bodyPreview;
-      }
-      const err = new ApiClientError(
-        `Request failed with status ${status}`,
-        status,
-        logEntry,
-        errorMeta
-      );
-      this.onError?.(err);
-      this.breaker?.onFailure();
-      throw err;
+      this.handleErrorResponse(status, logEntry, path, durationMs, correlationId, responseHeaders);
     }
 
     this.breaker?.onSuccess();
@@ -455,6 +347,172 @@ export class ApiClient {
       payload.rawBody = rawBody;
     }
     return payload;
+  }
+
+  /** Check circuit breaker and throw if open */
+  private checkCircuitBreaker(method: HttpMethod, path: string): void {
+    if (this.breaker && !this.breaker.canProceed()) {
+      const err = new ApiClientError(
+        "Circuit open: request blocked",
+        503,
+        {
+          id: randomUUID(),
+          name: this.name,
+          method,
+          url: this.buildUrl(path),
+          status: 503,
+          ok: false,
+          timestamp: new Date().toISOString(),
+          durationMs: 0,
+          request: {},
+          response: {},
+        }
+      );
+      this.onError?.(err);
+      throw err;
+    }
+  }
+
+  /** Build request options from method, headers, and API request options */
+  private buildRequestOptions(
+    method: HttpMethod,
+    requestHeaders: Record<string, string>,
+    options?: ApiRequestOptions
+  ): Parameters<APIRequestContext["fetch"]>[1] {
+    type FetchOptions = Parameters<APIRequestContext["fetch"]>[1];
+    const effectiveTimeout = options?.timeoutMs ?? 30_000;
+    let requestOptions: FetchOptions = {
+      method,
+      headers: requestHeaders,
+      timeout: effectiveTimeout,
+    };
+    const builtParams = this.buildParams(options?.query);
+    if (builtParams !== undefined) {
+      requestOptions = { ...requestOptions, params: builtParams };
+    }
+    if (options?.data !== undefined) {
+      requestOptions = { ...requestOptions, data: options.data };
+    }
+    if (options?.form !== undefined) {
+      requestOptions = { ...requestOptions, form: options.form };
+    }
+    return requestOptions;
+  }
+
+  /** Handle error response by building error metadata and throwing ApiClientError */
+  private handleErrorResponse(
+    status: number,
+    logEntry: ApiLogEntry,
+    path: string,
+    durationMs: number,
+    correlationId: string,
+    responseHeaders: Record<string, string>
+  ): never {
+    const retryAfterMs = parseRetryAfter(responseHeaders["retry-after"]);
+    const bodyPreview = buildBodyPreview(logEntry.response.body);
+    const errorMeta: {
+      bodyPreview?: string;
+      endpointPath?: string;
+      elapsedMs?: number;
+      correlationId?: string;
+      retryAfterMs?: number;
+    } = {
+      endpointPath: path,
+      elapsedMs: durationMs,
+      correlationId,
+    };
+    if (retryAfterMs !== undefined) {
+      errorMeta.retryAfterMs = retryAfterMs;
+    }
+    if (bodyPreview !== undefined) {
+      errorMeta.bodyPreview = bodyPreview;
+    }
+    const err = new ApiClientError(
+      `Request failed with status ${status}`,
+      status,
+      logEntry,
+      errorMeta
+    );
+    this.onError?.(err);
+    this.breaker?.onFailure();
+    throw err;
+  }
+
+  /** Build sanitized log entry from request/response data */
+  private buildLogEntry<T>(params: {
+    method: HttpMethod;
+    url: string;
+    status: number;
+    ok: boolean;
+    startTime: number;
+    durationMs: number;
+    correlationId: string;
+    requestHeaders: Record<string, string>;
+    responseHeaders: Record<string, string>;
+    options: ApiRequestOptions | undefined;
+    parsedBody: T;
+  }): ApiLogEntry {
+    const sanitisedRequestHeaders = sanitiseHeaders(
+      params.requestHeaders,
+      this.redactionState
+    );
+    const sanitisedResponseHeaders = sanitiseHeaders(
+      params.responseHeaders,
+      this.redactionState
+    );
+    const sanitisedRequestData = sanitiseValue<unknown>(
+      params.options?.data,
+      this.redactionState
+    );
+    const sanitisedForm = sanitiseValue<Record<string, string> | undefined>(
+      params.options?.form,
+      this.redactionState
+    );
+    const sanitisedQuery = sanitiseValue<Record<string, QueryParamValue> | undefined>(
+      params.options?.query,
+      this.redactionState
+    );
+    const sanitisedResponseBody: unknown = sanitiseValue(
+      params.parsedBody,
+      this.redactionState,
+      "responseBody"
+    );
+
+    const requestLog: ApiLogEntry["request"] = {};
+    if (sanitisedRequestHeaders) {
+      requestLog.headers = sanitisedRequestHeaders;
+    }
+    if (sanitisedRequestData !== undefined) {
+      requestLog.data = sanitisedRequestData;
+    }
+    if (sanitisedForm !== undefined) {
+      requestLog.form = sanitisedForm;
+    }
+    if (sanitisedQuery !== undefined) {
+      requestLog.query = sanitisedQuery;
+    }
+
+    const responseLog: ApiLogEntry["response"] = {};
+    if (sanitisedResponseHeaders) {
+      responseLog.headers = sanitisedResponseHeaders;
+    }
+    if (sanitisedResponseBody !== undefined) {
+      responseLog.body = sanitisedResponseBody;
+    }
+
+    return {
+      id: randomUUID(),
+      name: this.name,
+      method: params.method,
+      url: sanitiseUrl(params.url, this.redactionState),
+      status: params.status,
+      ok: params.ok,
+      timestamp: new Date(params.startTime).toISOString(),
+      durationMs: params.durationMs,
+      correlationId: params.correlationId,
+      request: requestLog,
+      response: responseLog,
+    };
   }
 
   /** Lazily build and cache the Playwright request context */

@@ -1,24 +1,18 @@
 import { Locator, Page } from "@playwright/test";
+import {
+  cleanTableText,
+  looksLikeSelectionCellText,
+  parseDataSnapshot,
+  parseKeyValueSnapshot,
+  parseWorkAllocationSnapshot,
+  type TableSnapshot,
+} from "./table.utils.helpers.js";
 
 export class TableUtils {
-  private static readonly SORT_ICON = "▼";
   private static readonly SCROLL_TIMEOUT_MS = 30_000;
 
-  /**
-   * Filter out hidden or invisible rows from DOM evaluation context
-   * @param rows - Array of DOM Element rows to filter
-   * @returns Array of visible rows only
-   */
-  private static filterVisibleRows(rows: Element[]): Element[] {
-    return rows.filter((row) => {
-      const el = row as HTMLElement;
-      if (el.hidden || el.hasAttribute("hidden")) return false;
-      const style = globalThis.getComputedStyle(el);
-      if (!style || style.display === "none" || style.visibility === "hidden") {
-        return false;
-      }
-      return el.getClientRects().length > 0;
-    });
+  private static cleanHeaderText(text: string): string {
+    return cleanTableText(text);
   }
 
   /**
@@ -28,9 +22,7 @@ export class TableUtils {
    *
    */
   public async mapExuiTable(table: Locator): Promise<Record<string, string>[]> {
-    return this.mapTable(table, (header) =>
-      header.replace(`\t${TableUtils.SORT_ICON}`, "")
-    );
+    return this.mapTable(table, TableUtils.cleanHeaderText);
   }
 
   /**
@@ -42,7 +34,7 @@ export class TableUtils {
   public async mapCitizenTable(
     table: Locator
   ): Promise<Record<string, string>[]> {
-    return this.mapTable(table);
+    return this.mapTable(table, TableUtils.cleanHeaderText);
   }
 
   /**
@@ -76,37 +68,8 @@ export class TableUtils {
       throw new Error("Selector cannot be empty");
     }
 
-    return this.evaluateTable(selector, page, (rows: Element[]) => {
-      const sortIconPattern = /[\u25B2\u25BC\u21E7\u21E9\u2BC5\u2BC6\u2191\u2193]/g;
-
-      const extractText = (el: HTMLElement, required: boolean = false): string => {
-        const text = (el.innerText || "").replaceAll(sortIconPattern, "").trim();
-        if (required && !text && el.isConnected && el.offsetParent !== null) {
-          throw new Error(
-            `Failed to extract text from visible key cell: ${el.tagName}.${el.className}`
-          );
-        }
-        return text;
-      };
-
-      const result: Record<string, string> = {};
-      const visibleRows = TableUtils.filterVisibleRows(rows);
-
-      for (const row of visibleRows) {
-        const cells = Array.from(row.querySelectorAll("th, td"));
-        if (cells.length < 2) continue;
-
-        const firstCell = cells[0] as HTMLElement | undefined;
-        if (!firstCell) continue;
-        const key = extractText(firstCell, true); // Keys must have content
-        if (!key) continue;
-
-        // Value cells can be empty - join all, allow empty strings
-        const values = cells.slice(1).map((cell) => extractText(cell as HTMLElement, false));
-        result[key] = values.join(" ").replaceAll(/\s+/g, " ").trim();
-      }
-      return result;
-    });
+    const snapshot = await this.buildTableSnapshot(selector, page);
+    return parseKeyValueSnapshot(snapshot);
   }
 
   /**
@@ -114,10 +77,12 @@ export class TableUtils {
    * Returns array of row objects where keys are column headers
    *
    * **Features**:
-   * - Auto-detects headers from <thead> or first row
+   * - Auto-detects headers from <thead> or first row with <th> cells
+   * - Expands colspans/rowspans and merges multi-row headers
    * - Filters hidden/invisible rows
    * - Removes sort icons from headers and cells
    * - Generates column_N fallback keys for missing headers
+   * - Preserves headerless tables by using column_N keys for all rows
    *
    * @param selector - CSS selector string (requires `page`) or Playwright Locator
    * @param page - Page instance (required if selector is a string)
@@ -139,66 +104,8 @@ export class TableUtils {
       throw new Error("Selector cannot be empty");
     }
 
-    return this.evaluateTable(selector, page, (rows: Element[]) => {
-      const sortIconPattern = /[\u25B2\u25BC\u21E7\u21E9\u2BC5\u2BC6\u2191\u2193]/g;
-      const cleanText = (text: string): string => {
-        return text.replaceAll(sortIconPattern, "").trim().replaceAll(/\s+/g, " ");
-      };
-
-      const extractHeaders = (rowElements: Element[]): string[] => {
-        if (!rowElements || rowElements.length === 0) return [];
-        const firstRow = rowElements[0];
-        if (!firstRow) return [];
-        
-        const table = firstRow.closest("table");
-        const thead = table?.querySelector("thead");
-        
-        if (thead) {
-          const headerCells = Array.from(thead.querySelectorAll("th, td"));
-          return headerCells.map((cell) =>
-            cleanText((cell as HTMLElement).innerText || "")
-          );
-        }
-        
-        const headerCells = Array.from(firstRow.querySelectorAll("th, td"));
-        return headerCells.map((cell) =>
-          cleanText((cell as HTMLElement).innerText || "")
-        );
-      };
-
-      const isTheadRow = (row: Element): boolean => {
-        return row.closest("thead") !== null;
-      };
-
-      if (!rows || rows.length === 0) return [];
-
-      // Filter out thead rows first (critical fix for full table selectors)
-      const nonTheadRows = Array.from(rows).filter(row => !isTheadRow(row));
-      
-      const headers = extractHeaders(rows);
-      // If original rows had thead, all headers are already extracted; start at 0
-      // If no thead, first non-thead row IS the header row, skip it (start at 1)
-      const hasTheadElement = rows[0]?.closest("table")?.querySelector("thead") !== null;
-      const startIndex = hasTheadElement ? 0 : 1;
-      const dataRows = TableUtils.filterVisibleRows(nonTheadRows.slice(startIndex));
-      const result: Array<Record<string, string>> = [];
-
-      for (const row of dataRows) {
-        const cells = Array.from(row.querySelectorAll("th, td"));
-        if (cells.length === 0) continue;
-
-        const rowData: Record<string, string> = {};
-        for (let i = 0; i < cells.length; i++) {
-          const cell = cells[i] as HTMLElement | undefined;
-          if (!cell) continue;
-          const header = headers[i];
-          const key = header?.trim() || `column_${i + 1}`;
-          rowData[key] = cleanText(cell.innerText || "");
-        }
-        result.push(rowData);
-      }
-      return result;
-    });
+    const snapshot = await this.buildTableSnapshot(selector, page);
+    return parseDataSnapshot(snapshot);
   }
 
   /**
@@ -206,10 +113,11 @@ export class TableUtils {
    * Handles buttons in headers and links in cells
    *
    * **Features**:
-   * - Extracts header text from buttons within <th> elements
-   * - Extracts cell text from links within <td> elements
-   * - Skips rows with aria-hidden="true"
-   * - Optimized with parallel Promise.all() for performance
+   * - Supports <thead> headers or falls back to the first body row with <th> cells
+   * - Extracts cell text from links/buttons within <td> or <th> cells
+   * - Handles colspans/rowspans in header rows
+   * - Skips rows hidden by aria or CSS visibility
+   * - Preserves headerless tables by using column_N keys for all rows
    *
    * @param tableLocator - Playwright Locator for the table element
    * @returns Array of row objects with header-value pairs
@@ -231,74 +139,8 @@ export class TableUtils {
     }
 
     try {
-      // Extract headers from <th> elements (buttons or text content)
-      const headers = await tableLocator.locator("thead th").evaluateAll((thElements) => {
-        const sortIconPattern = /[\u25B2\u25BC\u21E7\u21E9\u2BC5\u2BC6\u2191\u2193]/g;
-        const cleanText = (text: string): string => {
-          return text.replaceAll(sortIconPattern, "").trim().replaceAll(/\s+/g, " ");
-        };
-
-        return thElements.map((th, index) => {
-          const button = th.querySelector("button");
-          const text = button ? button.textContent : th.textContent;
-          const cleaned = cleanText(text || "");
-          return cleaned || `column_${index + 1}`; // Fallback for empty headers
-        });
-      });
-
-      if (headers.length === 0) {
-        return [];
-      }
-
-      // Extract all rows data in one evaluation to avoid race conditions
-      const rowsData = await tableLocator.locator("tbody tr").evaluateAll((rowElements, headerNames) => {
-        const sortIconPattern = /[\u25B2\u25BC\u21E7\u21E9\u2BC5\u2BC6\u2191\u2193]/g;
-        const cleanText = (text: string): string => {
-          return text.replaceAll(sortIconPattern, "").trim().replaceAll(/\s+/g, " ");
-        };
-
-        // Filter hidden rows (not just aria-hidden)
-        const visibleRows = rowElements.filter((row) => {
-          const el = row as HTMLElement;
-          // Check aria-hidden
-          if (el.getAttribute("aria-hidden") === "true") return false;
-          // Check CSS visibility
-          if (el.hidden || el.hasAttribute("hidden")) return false;
-          const style = globalThis.getComputedStyle(el);
-          if (!style || style.display === "none" || style.visibility === "hidden") {
-            return false;
-          }
-          return el.getClientRects().length > 0;
-        });
-
-        const result: Array<Record<string, string>> = [];
-
-        for (const row of visibleRows) {
-          const cells = Array.from(row.querySelectorAll("td"));
-          const rowData: Record<string, string> = {};
-
-          for (let j = 0; j < headerNames.length; j++) {
-            const header = headerNames[j];
-            if (!header) continue;
-
-            const cell = cells[j];
-            if (!cell) {
-              rowData[header] = ""; // Empty cell
-              continue;
-            }
-
-            const link = cell.querySelector("a");
-            const text = link ? link.textContent : cell.textContent;
-            rowData[header] = cleanText(text || "");
-          }
-
-          result.push(rowData);
-        }
-
-        return result;
-      }, headers);
-
-      return rowsData;
+      const snapshot = await this.buildWorkAllocationSnapshot(tableLocator);
+      return parseWorkAllocationSnapshot(snapshot);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       
@@ -325,8 +167,12 @@ export class TableUtils {
   ): Promise<Record<string, string>[]> {
     await table.scrollIntoViewIfNeeded({ timeout: TableUtils.SCROLL_TIMEOUT_MS });
 
-    const headers = (await table.locator('thead tr th').allInnerTexts())
-      .map(h => (headerTransform ? headerTransform(h) : h).trim());
+    const headers = (
+      await table.locator("thead tr th, thead tr td").allInnerTexts()
+    ).map((header) => {
+      const normalized = headerTransform ? headerTransform(header) : header;
+      return normalized.trim();
+    });
 
     const rows = table.locator('tbody tr');
     const rowCount = await rows.count();
@@ -334,6 +180,7 @@ export class TableUtils {
 
     for (let i = 0; i < rowCount; i++) {
       const row = rows.nth(i);
+      if (!(await row.isVisible())) continue;
       const cells = row.locator('th, td');
       const cellTexts = (await cells.allInnerTexts()).map((text) => text.trim());
       const alignedCells = this.alignCells(cellTexts, headers.length);
@@ -363,7 +210,9 @@ export class TableUtils {
 
     const firstCell = cells.at(0);
     const selectionTrimmed =
-      cells.length > headerCount && firstCell !== undefined && TableUtils.looksLikeSelectionCell(firstCell)
+      cells.length > headerCount &&
+      firstCell !== undefined &&
+      TableUtils.looksLikeSelectionCell(firstCell)
         ? cells.slice(1)
         : cells;
 
@@ -380,8 +229,349 @@ export class TableUtils {
    * @private
    */
   private static looksLikeSelectionCell(text: string): boolean {
-    const trimmed = text.trim();
-    return trimmed === "" || trimmed === "☐" || trimmed === "☑";
+    return looksLikeSelectionCellText(text);
+  }
+
+  private async buildTableSnapshot(
+    selector: string | Locator,
+    page: Page | undefined
+  ): Promise<TableSnapshot> {
+    return this.evaluateTable(selector, page, (rows: Element[]) => {
+      const table = rows[0]?.closest?.("table") ?? null;
+      const thead =
+        table && typeof table.querySelector === "function"
+          ? table.querySelector("thead")
+          : null;
+      const hasThead = thead !== null && thead !== undefined;
+      const theadRows: Element[] =
+        thead && typeof thead.querySelectorAll === "function"
+          ? Array.from(thead.querySelectorAll("tr"))
+          : [];
+      const theadRowSet = new Set(theadRows);
+      const rowSet = new Set<Element>();
+      const combinedRows: Element[] = [];
+
+      const addRow = (row: Element) => {
+        if (!rowSet.has(row)) {
+          rowSet.add(row);
+          combinedRows.push(row);
+        }
+      };
+
+      theadRows.forEach(addRow);
+      rows.forEach(addRow);
+
+      const scopedRows = table
+        ? combinedRows.filter((row) => {
+            if (typeof row.closest === "function") {
+              return row.closest("table") === table;
+            }
+            return theadRowSet.has(row);
+          })
+        : combinedRows;
+
+      const rowSnapshots = scopedRows.map((row) => {
+        const rowElement = row as HTMLElement;
+        const headerCellCount = rowElement.querySelectorAll("th").length;
+        const isHeaderRow = headerCellCount > 0;
+        const cellElements = Array.from(rowElement.querySelectorAll("th, td"));
+
+        const cells = cellElements.map((cell) => {
+          const cellElement = cell as HTMLElement;
+          const link =
+            typeof cellElement.querySelector === "function"
+              ? cellElement.querySelector("a")
+              : null;
+          const button =
+            typeof cellElement.querySelector === "function"
+              ? cellElement.querySelector("button")
+              : null;
+          const rawText = cellElement.innerText || cellElement.textContent || "";
+          const linkText =
+            link
+              ? (link as HTMLElement).innerText || (link as HTMLElement).textContent || ""
+              : undefined;
+          const buttonText =
+            button
+              ? (button as HTMLElement).innerText || (button as HTMLElement).textContent || ""
+              : undefined;
+          const colSpan = Math.max(
+            (cell as HTMLTableCellElement).colSpan || 1,
+            1
+          );
+          const rowSpan = Math.max(
+            (cell as HTMLTableCellElement).rowSpan || 1,
+            1
+          );
+
+          const snapshot = {
+            rawText,
+            colSpan,
+            rowSpan,
+            isHeader: isHeaderRow,
+          } as {
+            rawText: string;
+            colSpan: number;
+            rowSpan: number;
+            isHeader: boolean;
+            linkText?: string;
+            buttonText?: string;
+          };
+          if (linkText !== undefined) {
+            snapshot.linkText = linkText;
+          }
+          if (buttonText !== undefined) {
+            snapshot.buttonText = buttonText;
+          }
+          return snapshot;
+        });
+
+        const style =
+          typeof globalThis.getComputedStyle === "function"
+            ? globalThis.getComputedStyle(rowElement)
+            : null;
+        const rects =
+          typeof rowElement.getClientRects === "function"
+            ? rowElement.getClientRects()
+            : [];
+        const isVisible =
+          !!style &&
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          rects.length > 0;
+        const isHiddenAttr =
+          rowElement.hidden ||
+          (typeof rowElement.hasAttribute === "function" &&
+            rowElement.hasAttribute("hidden"));
+        const isAriaHidden =
+          typeof rowElement.getAttribute === "function" &&
+          rowElement.getAttribute("aria-hidden") === "true";
+        const isTheadRow =
+          theadRowSet.has(row) || row.closest?.("thead") !== null;
+        const className =
+          typeof rowElement.className === "string"
+            ? rowElement.className.trim()
+            : "";
+        const hasActionsRowClass =
+          typeof rowElement.classList?.contains === "function"
+            ? rowElement.classList.contains("actions-row")
+            : className.split(/\s+/).includes("actions-row");
+        const hasFooterRowClass =
+          typeof rowElement.classList?.contains === "function"
+            ? rowElement.classList.contains("footer-row")
+            : className.split(/\s+/).includes("footer-row");
+        const hasActionsCell =
+          typeof rowElement.querySelector === "function"
+            ? rowElement.querySelector("td.cell-actions") !== null
+            : false;
+        const hasFooterCell =
+          typeof rowElement.querySelector === "function"
+            ? rowElement.querySelector("td.cell-footer") !== null
+            : false;
+        const totalColSpan = cells.reduce(
+          (sum, cell) => sum + cell.colSpan,
+          0
+        );
+
+        const snapshot = {
+          cells,
+          isTheadRow,
+          isAriaHidden,
+          isHiddenAttr: Boolean(isHiddenAttr),
+          isVisible,
+          hasActionsCell,
+          hasFooterCell,
+          hasActionsRowClass,
+          hasFooterRowClass,
+          totalColSpan,
+        } as {
+          cells: typeof cells;
+          isTheadRow: boolean;
+          isAriaHidden: boolean;
+          isHiddenAttr: boolean;
+          isVisible: boolean;
+          className?: string;
+          hasActionsCell: boolean;
+          hasFooterCell: boolean;
+          hasActionsRowClass: boolean;
+          hasFooterRowClass: boolean;
+          totalColSpan: number;
+        };
+        if (className) {
+          snapshot.className = className;
+        }
+        return snapshot;
+      });
+
+      return { rows: rowSnapshots, hasThead };
+    });
+  }
+
+  private async buildWorkAllocationSnapshot(
+    tableLocator: Locator
+  ): Promise<TableSnapshot> {
+    return tableLocator.evaluate((table) => {
+      const selectDirectRows = (container: Element | null): Element[] => {
+        if (!container) return [];
+        return Array.from(container.querySelectorAll(":scope > tr"));
+      };
+
+      const selectTableRows = (tableElement: HTMLTableElement): Element[] => {
+        return Array.from(
+          tableElement.querySelectorAll(
+            ":scope > thead > tr, :scope > tbody > tr, :scope > tfoot > tr, :scope > tr"
+          )
+        );
+      };
+
+      const tableElement = table as HTMLTableElement;
+      const thead = tableElement.querySelector("thead");
+      const tbody = tableElement.querySelector("tbody");
+      const hasThead = thead !== null && thead !== undefined;
+      const theadRows: Element[] = thead ? selectDirectRows(thead) : [];
+      const theadRowSet = new Set(theadRows);
+      let dataRows = tbody ? selectDirectRows(tbody) : selectTableRows(tableElement);
+
+      if (theadRows.length > 0) {
+        dataRows = dataRows.filter((row) => row.closest("thead") === null);
+      }
+
+      const rows = [...theadRows, ...dataRows];
+      const rowSnapshots = rows.map((row) => {
+        const rowElement = row as HTMLElement;
+        const headerCellCount = rowElement.querySelectorAll("th").length;
+        const isHeaderRow = headerCellCount > 0;
+        const cellElements = Array.from(rowElement.querySelectorAll("th, td"));
+
+        const cells = cellElements.map((cell) => {
+          const cellElement = cell as HTMLElement;
+          const link =
+            typeof cellElement.querySelector === "function"
+              ? cellElement.querySelector("a")
+              : null;
+          const button =
+            typeof cellElement.querySelector === "function"
+              ? cellElement.querySelector("button")
+              : null;
+          const rawText = cellElement.innerText || cellElement.textContent || "";
+          const linkText =
+            link
+              ? (link as HTMLElement).innerText || (link as HTMLElement).textContent || ""
+              : undefined;
+          const buttonText =
+            button
+              ? (button as HTMLElement).innerText || (button as HTMLElement).textContent || ""
+              : undefined;
+          const colSpan = Math.max(
+            (cell as HTMLTableCellElement).colSpan || 1,
+            1
+          );
+          const rowSpan = Math.max(
+            (cell as HTMLTableCellElement).rowSpan || 1,
+            1
+          );
+
+          const snapshot = {
+            rawText,
+            colSpan,
+            rowSpan,
+            isHeader: isHeaderRow,
+          } as {
+            rawText: string;
+            colSpan: number;
+            rowSpan: number;
+            isHeader: boolean;
+            linkText?: string;
+            buttonText?: string;
+          };
+          if (linkText !== undefined) {
+            snapshot.linkText = linkText;
+          }
+          if (buttonText !== undefined) {
+            snapshot.buttonText = buttonText;
+          }
+          return snapshot;
+        });
+
+        const style =
+          typeof globalThis.getComputedStyle === "function"
+            ? globalThis.getComputedStyle(rowElement)
+            : null;
+        const rects =
+          typeof rowElement.getClientRects === "function"
+            ? rowElement.getClientRects()
+            : [];
+        const isVisible =
+          !!style &&
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          rects.length > 0;
+        const isHiddenAttr =
+          rowElement.hidden ||
+          (typeof rowElement.hasAttribute === "function" &&
+            rowElement.hasAttribute("hidden"));
+        const isAriaHidden =
+          typeof rowElement.getAttribute === "function" &&
+          rowElement.getAttribute("aria-hidden") === "true";
+        const isTheadRow =
+          theadRowSet.has(row) || row.closest?.("thead") !== null;
+        const className =
+          typeof rowElement.className === "string"
+            ? rowElement.className.trim()
+            : "";
+        const hasActionsRowClass =
+          typeof rowElement.classList?.contains === "function"
+            ? rowElement.classList.contains("actions-row")
+            : className.split(/\s+/).includes("actions-row");
+        const hasFooterRowClass =
+          typeof rowElement.classList?.contains === "function"
+            ? rowElement.classList.contains("footer-row")
+            : className.split(/\s+/).includes("footer-row");
+        const hasActionsCell =
+          typeof rowElement.querySelector === "function"
+            ? rowElement.querySelector("td.cell-actions") !== null
+            : false;
+        const hasFooterCell =
+          typeof rowElement.querySelector === "function"
+            ? rowElement.querySelector("td.cell-footer") !== null
+            : false;
+        const totalColSpan = cells.reduce(
+          (sum, cell) => sum + cell.colSpan,
+          0
+        );
+
+        const snapshot = {
+          cells,
+          isTheadRow,
+          isAriaHidden,
+          isHiddenAttr: Boolean(isHiddenAttr),
+          isVisible,
+          hasActionsCell,
+          hasFooterCell,
+          hasActionsRowClass,
+          hasFooterRowClass,
+          totalColSpan,
+        } as {
+          cells: typeof cells;
+          isTheadRow: boolean;
+          isAriaHidden: boolean;
+          isHiddenAttr: boolean;
+          isVisible: boolean;
+          className?: string;
+          hasActionsCell: boolean;
+          hasFooterCell: boolean;
+          hasActionsRowClass: boolean;
+          hasFooterRowClass: boolean;
+          totalColSpan: number;
+        };
+        if (className) {
+          snapshot.className = className;
+        }
+        return snapshot;
+      });
+
+      return { rows: rowSnapshots, hasThead };
+    });
   }
 
   /**
@@ -402,12 +592,15 @@ export class TableUtils {
   ): Promise<T> {
     try {
       if (typeof selector !== "string") {
-        return await selector.locator("tr").evaluateAll(fn);
+        const rowSelector = ":scope > thead > tr, :scope > tbody > tr, :scope > tfoot > tr, :scope > tr";
+        return await selector.locator(rowSelector).evaluateAll(fn);
       }
       if (!page) {
         throw new Error("Page instance required for string selectors");
       }
-      return await page.$$eval(`${selector} tr`, fn);
+      const rowSelector =
+        `${selector} > thead > tr, ${selector} > tbody > tr, ${selector} > tfoot > tr, ${selector} > tr`;
+      return await page.$$eval(rowSelector, fn);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       const context = typeof selector === "string" ? selector : "Locator";
