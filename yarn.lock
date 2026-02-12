@@ -3189,8 +3189,8 @@ __metadata:
   linkType: hard
 
 "lighthouse@npm:13":
-  version: 13.0.2
-  resolution: "lighthouse@npm:13.0.2"
+  version: 13.0.3
+  resolution: "lighthouse@npm:13.0.3"
   dependencies:
     "@paulirish/trace_engine": "npm:0.0.61"
     "@sentry/node": "npm:^9.28.1"
@@ -3221,7 +3221,7 @@ __metadata:
     chrome-debug: core/scripts/manual-chrome-launcher.js
     lighthouse: cli/index.js
     smokehouse: cli/test/smokehouse/frontends/smokehouse-bin.js
-  checksum: 10c0/cc14aa875842f66949cde761bb154120eba00986f2fd94c84afd53419de639646738f74b46589022e8427d318340ddf87540ff341323d2aaf0497596d9e3a73c
+  checksum: 10c0/cc3046ee3da853f6684f1c89ff220d3f1f31c98ff0c0328de13b83882ba6d3d7b3cfe9a8a53052569866e2854ef9f9fffc7ec962a3eb7c866dc8a8655d7da6a3
   languageName: node
   linkType: hard
 
