@@ -1329,11 +1329,11 @@ __metadata:
   linkType: hard
 
 "@types/node@npm:*, @types/node@npm:^25.2.0":
-  version: 25.3.1
-  resolution: "@types/node@npm:25.3.1"
+  version: 25.3.3
+  resolution: "@types/node@npm:25.3.3"
   dependencies:
     undici-types: "npm:~7.18.0"
-  checksum: 10c0/f4714e3f2c393434cdefbf207f3fe470bcf4d6c5717298c3fc9239e362a57cd25e59603c60e9c956e7d5d0dfb97cf2e037b37cf6dc2f3876f6a963146f7adc6d
+  checksum: 10c0/63e1d3816a9f4a706ab5d588d18cb98aa824b97748ff585537d327528e9438f58f69f45c7762e7cd3a1ab32c1619f551aabe8075d13172f9273cf10f6d83ab91
   languageName: node
   linkType: hard
 
@@ -2409,13 +2409,13 @@ __metadata:
   linkType: hard
 
 "eslint-plugin-playwright@npm:^2.5.1":
-  version: 2.7.1
-  resolution: "eslint-plugin-playwright@npm:2.7.1"
+  version: 2.9.0
+  resolution: "eslint-plugin-playwright@npm:2.9.0"
   dependencies:
     globals: "npm:^17.3.0"
   peerDependencies:
     eslint: ">=8.40.0"
-  checksum: 10c0/efd45122b4d4e77608862f0f25a95200a0e367abbe6d53bdce38c59009c4b90edcf12b6f1c2b50e86b0addea56c68ad0c7767768b0a2a73d7f09a814b827df72
+  checksum: 10c0/8f5528547c7d731b9ff4afad7a8b98ede86d93342842be9f06a5428358180c17f7b7624e4dcaae331f211345bcecf9f3cc48f8a995549f30dfd633b8300e5a08
   languageName: node
   linkType: hard
 
@@ -2838,9 +2838,9 @@ __metadata:
   linkType: hard
 
 "globals@npm:^17.3.0":
-  version: 17.3.0
-  resolution: "globals@npm:17.3.0"
-  checksum: 10c0/7f21443ecaa60c6e9ff56d9fb6f10a9b5f9514e7f22e5392f715472bb220ce31c865ebf414a32695150e733fb3e1013e6322dbce70fddd1e066f372b8d55a4b8
+  version: 17.4.0
+  resolution: "globals@npm:17.4.0"
+  checksum: 10c0/2be9e8c2b9035836f13d420b22f0247a328db82967d3bebfc01126d888ed609305f06c05895914e969653af5c6ba35fd7a0920f3e6c869afa60666c810630feb
   languageName: node
   linkType: hard
 
