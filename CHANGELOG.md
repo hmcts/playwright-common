@@ -3,6 +3,10 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3]
+### Added
+- - Upgraded `ajv` to version `8.18.0`
+
 ## [1.1.2]
 ### Added
 - `table.utils.helpers.ts` - New module containing reusable table parsing logic with comprehensive TypeScript types
@@ -210,8 +214,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `chromium` project config
 
 ## [1.0.13]
-
-- Upgraded `ajv` to version `8.18.0`
 
 ### Added
 
