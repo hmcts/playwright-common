@@ -1,7 +1,7 @@
 {
   "name": "@hmcts/playwright-common",
   "description": "Common library for Playwright tests",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "author": "HMCTS",
   "license": "MIT",
   "repository": {
@@ -26,6 +26,7 @@
     "@axe-core/playwright": "^4.11.0",
     "@eslint/js": "^9.11.1",
     "@typescript-eslint/eslint-plugin": "8.58.0",
+    "ajv": "^8.18.0",
     "axe-core": "^4.11.1",
     "axe-html-reporter": "^2.2.11",
     "eslint": "^9.11.1",
