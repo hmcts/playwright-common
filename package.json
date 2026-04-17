@@ -69,5 +69,5 @@
     "glob": "^11.0.0",
     "esbuild": "^0.28.0"
   },
-  "packageManager": "yarn@4.13.0"
+  "packageManager": "yarn@4.14.1"
 }
