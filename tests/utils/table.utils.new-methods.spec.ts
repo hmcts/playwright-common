@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { TableUtils } from "../../src/utils/table.utils.js";
 import {
   createMockPage,
   createMockLocator,
   createMockDataTable,
+  createMockDataTableWithHeaderRows,
   createWorkAllocationLocator,
   createMockDataTableWithActualTheadRows,
   createWorkAllocationLocatorWithHiddenRows,
@@ -91,6 +92,12 @@ describe("TableUtils - New Methods", () => {
       ).rejects.toThrow("Page instance required for string selectors");
     });
 
+    it("throws when selector string is empty", async () => {
+      await expect(
+        utils.parseKeyValueTable("", createMockPage([["Key", "Value"]]))
+      ).rejects.toThrow("Selector cannot be empty");
+    });
+
     it("filters out hidden rows", async () => {
       const mockPage = {
         $$eval: vi.fn().mockImplementation((selector: string, fn: (rows: Element[]) => unknown) => {
@@ -144,6 +151,53 @@ describe("TableUtils - New Methods", () => {
       expect(result["Hidden"]).toBeUndefined();
     });
 
+    it("skips aria-hidden rows", async () => {
+      const mockPage = createMockPage(
+        [
+          ["Case Reference", "12345"],
+          ["Hidden Key", "Hidden Value"],
+        ],
+        { ariaHiddenRows: [1] }
+      );
+
+      const result = await utils.parseKeyValueTable("#table", mockPage);
+
+      expect(result).toEqual({
+        "Case Reference": "12345",
+      });
+    });
+
+    it("treats rows without computed styles as hidden", async () => {
+      const mockPage = {
+        $$eval: vi.fn().mockImplementation((_selector: string, fn: (rows: Element[]) => unknown) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (globalThis as any).getComputedStyle = vi.fn().mockReturnValue(null);
+
+          try {
+            const row = {
+              querySelectorAll: () => [
+                { innerText: "Case Reference", textContent: "Case Reference" },
+                { innerText: "12345", textContent: "12345" }
+              ],
+              hidden: false,
+              hasAttribute: () => false,
+              getClientRects: () => [{}],
+              className: ""
+            };
+
+            return fn([row] as unknown as Element[]);
+          } finally {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (globalThis as any).getComputedStyle;
+          }
+        }),
+      } as unknown as Page;
+
+      const result = await utils.parseKeyValueTable("#table", mockPage);
+
+      expect(result).toEqual({});
+    });
+
     it("allows empty value cells (returns empty string)", async () => {
       // CRITICAL REGRESSION TEST: empty value cells should not throw
       const mockPage = createMockPage([
@@ -166,13 +220,19 @@ describe("TableUtils - New Methods", () => {
         ["", "Some value"], // Empty key - should throw
       ]);
 
-      // Empty key cells should still be rejected
-      const result = await utils.parseKeyValueTable("#table", mockPage);
-      expect(Object.keys(result)).toHaveLength(0); // Row skipped due to empty key
+      await expect(
+        utils.parseKeyValueTable("#table", mockPage)
+      ).rejects.toThrow("Failed to extract text from visible key cell");
     });
   });
 
   describe("parseDataTable", () => {
+    it("throws when selector string is empty", async () => {
+      await expect(
+        utils.parseDataTable("", createMockDataTable({ hasThead: true, headers: ["Name"], rows: [["Alice"]] }))
+      ).rejects.toThrow("Selector cannot be empty");
+    });
+
     it("parses tables with thead headers", async () => {
       const mockPage = createMockDataTable({
         hasThead: true,
@@ -221,6 +281,7 @@ describe("TableUtils - New Methods", () => {
       const mockPage = createMockDataTable({
         hasThead: false,
         headers: ["Application.pdf", "2025-01-01"],  // First row becomes headers
+        headerRowUsesTh: true,
         rows: [
           ["Evidence.docx", "2025-01-15"],  // Only remaining data rows
         ],
@@ -231,6 +292,112 @@ describe("TableUtils - New Methods", () => {
       // First row becomes headers, so only second data row is returned
       expect(result).toEqual([
         { "Application.pdf": "Evidence.docx", "2025-01-01": "2025-01-15" },
+      ]);
+    });
+
+    it("keeps first row as data when header cells are not th", async () => {
+      const mockPage = createMockDataTable({
+        hasThead: false,
+        headers: ["Application.pdf", "2025-01-01"],
+        headerRowUsesTh: false,
+        rows: [
+          ["Evidence.docx", "2025-01-15"],
+        ],
+      });
+
+      const result = await utils.parseDataTable("#docs", mockPage);
+
+      expect(result).toEqual([
+        { column_1: "Application.pdf", column_2: "2025-01-01" },
+        { column_1: "Evidence.docx", column_2: "2025-01-15" },
+      ]);
+    });
+
+    it("ignores rows from nested tables", async () => {
+      const mockPage = {
+        $$eval: vi.fn().mockImplementation((_selector: string, fn: (rows: Element[]) => unknown) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (globalThis as any).getComputedStyle = vi.fn().mockReturnValue({
+            display: "block",
+            visibility: "visible",
+          });
+
+          try {
+            const outerTable = { querySelector: () => null };
+            const nestedTable = { querySelector: () => null };
+            const headerCells = [
+              { innerText: "Name", textContent: "Name", colSpan: 1, rowSpan: 1 },
+            ];
+
+            const headerRow = {
+              querySelectorAll: (sel: string) => {
+                if (sel === "th, td" || sel === "th") return headerCells;
+                return [];
+              },
+              hidden: false,
+              hasAttribute: () => false,
+              getClientRects: () => [{}],
+              closest: (sel: string) => (sel === "table" ? outerTable : null),
+            };
+
+            const nestedRow = {
+              querySelectorAll: () => [
+                { innerText: "Nested", textContent: "Nested" },
+              ],
+              hidden: false,
+              hasAttribute: () => false,
+              getClientRects: () => [{}],
+              closest: (sel: string) => (sel === "table" ? nestedTable : null),
+            };
+
+            const dataRow = {
+              querySelectorAll: () => [
+                { innerText: "Alice", textContent: "Alice" },
+              ],
+              hidden: false,
+              hasAttribute: () => false,
+              getClientRects: () => [{}],
+              closest: (sel: string) => (sel === "table" ? outerTable : null),
+            };
+
+            return fn([headerRow, nestedRow, dataRow] as unknown as Element[]);
+          } finally {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (globalThis as any).getComputedStyle;
+          }
+        }),
+      } as unknown as Page;
+
+      const result = await utils.parseDataTable("#table", mockPage);
+
+      expect(result).toEqual([
+        { Name: "Alice" },
+      ]);
+    });
+
+    it("merges multi-row headers with colspans and rowspans", async () => {
+      const mockPage = createMockDataTableWithHeaderRows({
+        headerRows: [
+          [
+            { text: "Hearing", colSpan: 2 },
+            { text: "Judge", rowSpan: 2 },
+          ],
+          [
+            { text: "Date" },
+            { text: "Time" },
+          ],
+        ],
+        rows: [["01 Jan 2025", "10:00", "Smith"]],
+      });
+
+      const result = await utils.parseDataTable("#table", mockPage);
+
+      expect(result).toEqual([
+        {
+          "Hearing Date": "01 Jan 2025",
+          "Hearing Time": "10:00",
+          "Judge": "Smith",
+        },
       ]);
     });
 
@@ -248,6 +415,20 @@ describe("TableUtils - New Methods", () => {
       ]);
     });
 
+    it("treats zero-width headers as empty and uses fallback keys", async () => {
+      const mockPage = createMockDataTable({
+        hasThead: true,
+        headers: ["\u200B", "Status"],
+        rows: [["Value", "Open"]],
+      });
+
+      const result = await utils.parseDataTable("#table", mockPage);
+
+      expect(result).toEqual([
+        { column_1: "Value", Status: "Open" },
+      ]);
+    });
+
     it("handles empty tables gracefully", async () => {
       const mockPage = createMockDataTable({
         hasThead: true,
@@ -256,6 +437,70 @@ describe("TableUtils - New Methods", () => {
       });
 
       const result = await utils.parseDataTable("#empty", mockPage);
+
+      expect(result).toEqual([]);
+    });
+
+    it("skips aria-hidden rows", async () => {
+      const mockPage = createMockDataTable({
+        hasThead: true,
+        headers: ["Name"],
+        rows: [["Visible"], ["Hidden"]],
+        ariaHiddenRows: [1],
+      });
+
+      const result = await utils.parseDataTable("#table", mockPage);
+
+      expect(result).toEqual([
+        { Name: "Visible" },
+      ]);
+    });
+
+    it("filters rows when computed styles are unavailable", async () => {
+      const mockPage = {
+        $$eval: vi.fn().mockImplementation((_selector: string, fn: (rows: Element[]) => unknown) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (globalThis as any).getComputedStyle = vi.fn().mockReturnValue(null);
+
+          try {
+            const headerRow = {
+              querySelectorAll: () => [
+                { innerText: "Name", textContent: "Name", colSpan: 1, rowSpan: 1 },
+              ],
+              hidden: false,
+              hasAttribute: () => false,
+              getClientRects: () => [{}],
+              closest: () => null,
+            };
+
+            const thead = {
+              querySelectorAll: () => [headerRow],
+            };
+
+            const table = {
+              querySelector: (sel: string) => (sel === "thead" ? thead : null),
+            };
+
+            const row = {
+              querySelectorAll: () => [
+                { innerText: "Name", textContent: "Name" },
+                { innerText: "Alice", textContent: "Alice" },
+              ],
+              hidden: false,
+              hasAttribute: () => false,
+              getClientRects: () => [{}],
+              closest: (sel: string) => (sel === "table" ? table : null),
+            };
+
+            return fn([row] as unknown as Element[]);
+          } finally {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (globalThis as any).getComputedStyle;
+          }
+        }),
+      } as unknown as Page;
+
+      const result = await utils.parseDataTable("#table", mockPage);
 
       expect(result).toEqual([]);
     });
@@ -329,6 +574,12 @@ describe("TableUtils - New Methods", () => {
   });
 
   describe("parseWorkAllocationTable", () => {
+    it("throws when table locator is null", async () => {
+      await expect(
+        utils.parseWorkAllocationTable(null as unknown as Locator)
+      ).rejects.toThrow("tableLocator cannot be null or undefined");
+    });
+
     it("extracts headers from buttons in th elements", async () => {
       const mockLocator = createWorkAllocationLocator({
         headers: [
@@ -344,6 +595,47 @@ describe("TableUtils - New Methods", () => {
 
       expect(result).toEqual([
         { Task: "Review", Assignee: "Alice" },
+      ]);
+    });
+
+    it("derives headers from the first body row when thead is missing", async () => {
+      const mockLocator = createWorkAllocationLocator({
+        hasThead: false,
+        headers: [
+          { text: "Task", hasButton: false },
+          { text: "Assignee", hasButton: false },
+        ],
+        headerRowUsesTh: true,
+        rows: [
+          [{ text: "Review", hasLink: false }, { text: "Alice", hasLink: false }],
+        ],
+      });
+
+      const result = await utils.parseWorkAllocationTable(mockLocator);
+
+      expect(result).toEqual([
+        { Task: "Review", Assignee: "Alice" },
+      ]);
+    });
+
+    it("keeps first row as data when header cells are not th", async () => {
+      const mockLocator = createWorkAllocationLocator({
+        hasThead: false,
+        headerRowUsesTh: false,
+        headers: [
+          { text: "First Task", hasButton: false },
+          { text: "First Assignee", hasButton: false },
+        ],
+        rows: [
+          [{ text: "Review", hasLink: false }, { text: "Alice", hasLink: false }],
+        ],
+      });
+
+      const result = await utils.parseWorkAllocationTable(mockLocator);
+
+      expect(result).toEqual([
+        { column_1: "First Task", column_2: "First Assignee" },
+        { column_1: "Review", column_2: "Alice" },
       ]);
     });
 
@@ -512,6 +804,124 @@ describe("TableUtils - New Methods", () => {
       expect(result[1]["column_1"]).toBe("☑");
     });
 
+    it("aligns selection columns without trimming data cells", async () => {
+      const mockLocator = createWorkAllocationLocator({
+        headers: [
+          { text: "Task", hasButton: false },
+          { text: "Assignee", hasButton: false },
+        ],
+        rows: [
+          [
+            { text: "☐", hasLink: false },
+            { text: "Review", hasLink: false },
+            { text: "Alice", hasLink: false },
+          ],
+        ],
+      });
+
+      const result = await utils.parseWorkAllocationTable(mockLocator);
+
+      expect(result).toEqual([
+        { Task: "Review", Assignee: "Alice" },
+      ]);
+    });
+
+    it("pads work allocation rows when cells are missing", async () => {
+      const mockLocator = createWorkAllocationLocator({
+        headers: [
+          { text: "Task", hasButton: false },
+          { text: "Assignee", hasButton: false },
+          { text: "Due date", hasButton: false },
+        ],
+        rows: [
+          [
+            { text: "Review", hasLink: false },
+            { text: "Alice", hasLink: false },
+          ],
+        ],
+      });
+
+      const result = await utils.parseWorkAllocationTable(mockLocator);
+
+      expect(result).toEqual([
+        { Task: "Review", Assignee: "Alice", "Due date": "" },
+      ]);
+    });
+
+    it("trims extra work allocation cells when a selection column is present", async () => {
+      const mockLocator = createWorkAllocationLocator({
+        headers: [
+          { text: "Task", hasButton: false },
+          { text: "Assignee", hasButton: false },
+        ],
+        rows: [
+          [
+            { text: "☐", hasLink: false },
+            { text: "Review", hasLink: false },
+            { text: "Alice", hasLink: false },
+            { text: "Extra", hasLink: false },
+          ],
+        ],
+      });
+
+      const result = await utils.parseWorkAllocationTable(mockLocator);
+
+      expect(result).toEqual([
+        { Task: "Review", Assignee: "Alice" },
+      ]);
+    });
+
+    it("filters rows when computed styles are unavailable", async () => {
+      const headerRow = {
+        querySelectorAll: () => [
+          { innerText: "Task", textContent: "Task", colSpan: 1, rowSpan: 1 },
+        ],
+        hidden: false,
+        hasAttribute: () => false,
+        getClientRects: () => [{}],
+        getAttribute: () => null,
+        closest: () => null,
+      };
+
+      const dataRow = {
+        querySelectorAll: () => [
+          { innerText: "Review", textContent: "Review", colSpan: 1, rowSpan: 1, querySelector: () => null },
+        ],
+        hidden: false,
+        hasAttribute: () => false,
+        getClientRects: () => [{}],
+        getAttribute: () => null,
+        classList: { contains: () => false },
+        querySelector: () => null,
+        closest: () => null,
+      };
+
+      const thead = { querySelectorAll: () => [headerRow] };
+      const tbody = { querySelectorAll: () => [dataRow] };
+      const table = {
+        querySelector: (sel: string) => (sel === "thead" ? thead : sel === "tbody" ? tbody : null),
+        querySelectorAll: (sel: string) => (sel === "tr" ? [headerRow, dataRow] : []),
+      };
+
+      const mockLocator = {
+        evaluate: vi.fn().mockImplementation((fn: (table: Element) => unknown) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (globalThis as any).getComputedStyle = vi.fn().mockReturnValue(null);
+
+          try {
+            return Promise.resolve(fn(table as unknown as Element));
+          } finally {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (globalThis as any).getComputedStyle;
+          }
+        }),
+      } as unknown as Locator;
+
+      const result = await utils.parseWorkAllocationTable(mockLocator);
+
+      expect(result).toEqual([]);
+    });
+
     it("handles action buttons in data cells", async () => {
       // Action buttons in cells should extract button text
       const mockLocator = createWorkAllocationLocator({
@@ -537,6 +947,146 @@ describe("TableUtils - New Methods", () => {
         { Task: "Review Application", Actions: "Assign" },
         { Task: "Submit Documents", Actions: "Complete" },
       ]);
+    });
+
+    it("skips non-data rows with full-width colspans", async () => {
+      const mockLocator = createWorkAllocationLocator({
+        headers: [
+          { text: "Task", hasButton: false },
+          { text: "Assignee", hasButton: false },
+        ],
+        rows: [
+          [
+            { text: "Review", hasLink: false },
+            { text: "Alice", hasLink: false },
+          ],
+          [
+            { text: "Assign", hasLink: false, colSpan: 2 },
+          ],
+        ],
+      });
+
+      const result = await utils.parseWorkAllocationTable(mockLocator);
+
+      expect(result).toEqual([
+        { Task: "Review", Assignee: "Alice" },
+      ]);
+    });
+
+    it("skips action rows based on row class", async () => {
+      const headerRow = {
+        querySelectorAll: () => [
+          { innerText: "Task", textContent: "Task", colSpan: 1, rowSpan: 1 },
+          { innerText: "Assignee", textContent: "Assignee", colSpan: 1, rowSpan: 1 },
+        ],
+        hidden: false,
+        hasAttribute: () => false,
+        getClientRects: () => [{}],
+        getAttribute: () => null,
+        closest: (sel: string) => (sel === "thead" ? {} : null),
+      };
+
+      const dataRow = {
+        querySelectorAll: () => [
+          { innerText: "Review", textContent: "Review", colSpan: 1, rowSpan: 1, querySelector: () => null },
+          { innerText: "Alice", textContent: "Alice", colSpan: 1, rowSpan: 1, querySelector: () => null },
+        ],
+        hidden: false,
+        hasAttribute: () => false,
+        getClientRects: () => [{}],
+        getAttribute: () => null,
+        classList: { contains: () => false },
+        querySelector: () => null,
+        closest: () => null,
+      };
+
+      const actionRow = {
+        querySelectorAll: () => [
+          { innerText: "Assign", textContent: "Assign", colSpan: 2, rowSpan: 1, querySelector: () => null },
+        ],
+        hidden: false,
+        hasAttribute: () => false,
+        getClientRects: () => [{}],
+        getAttribute: () => null,
+        classList: { contains: (name: string) => name === "actions-row" },
+        querySelector: () => null,
+        closest: () => null,
+      };
+
+      const thead = { querySelectorAll: () => [headerRow] };
+      const tbody = { querySelectorAll: () => [dataRow, actionRow] };
+      const table = {
+        querySelector: (sel: string) => (sel === "thead" ? thead : sel === "tbody" ? tbody : null),
+        querySelectorAll: (sel: string) => (sel === "tr" ? [headerRow, dataRow, actionRow] : []),
+      };
+
+      const mockLocator = {
+        evaluate: vi.fn().mockImplementation((fn: (table: Element) => unknown) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (globalThis as any).getComputedStyle = vi.fn().mockReturnValue({
+            display: "block",
+            visibility: "visible",
+          });
+
+          try {
+            return Promise.resolve(fn(table as unknown as Element));
+          } finally {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (globalThis as any).getComputedStyle;
+          }
+        }),
+      } as unknown as Locator;
+
+      const result = await utils.parseWorkAllocationTable(mockLocator);
+
+      expect(result).toEqual([
+        { Task: "Review", Assignee: "Alice" },
+      ]);
+    });
+
+    it("returns an empty array when no headers can be derived", async () => {
+      const emptyTable = {
+        querySelector: (sel: string) => {
+          if (sel === "thead") {
+            return { querySelectorAll: () => [] };
+          }
+          if (sel === "tbody") {
+            return { querySelectorAll: () => [] };
+          }
+          return null;
+        },
+        querySelectorAll: () => [],
+      };
+
+      const mockLocator = {
+        evaluate: vi.fn().mockImplementation((fn: (table: Element) => unknown) => {
+          return Promise.resolve(fn(emptyTable as unknown as Element));
+        }),
+      } as unknown as Locator;
+
+      const result = await utils.parseWorkAllocationTable(mockLocator);
+
+      expect(result).toEqual([]);
+    });
+
+    it("wraps Target closed errors with navigation guidance", async () => {
+      const mockLocator = {
+        evaluate: vi.fn().mockRejectedValue(new Error("Target closed")),
+      } as unknown as Locator;
+
+      await expect(
+        utils.parseWorkAllocationTable(mockLocator)
+      ).rejects.toThrow(/page may have crashed or navigated away/);
+    });
+
+    it("wraps non-navigation errors with a parse failure message", async () => {
+      const mockLocator = {
+        evaluate: vi.fn().mockRejectedValue(new Error("unexpected failure")),
+      } as unknown as Locator;
+
+      await expect(
+        utils.parseWorkAllocationTable(mockLocator)
+      ).rejects.toThrow("Failed to parse work allocation table: unexpected failure");
     });
   });
 

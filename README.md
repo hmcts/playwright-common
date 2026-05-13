@@ -57,6 +57,24 @@ For local development without packing, you can also use Yarn portal from the con
 yarn add -D @hmcts/playwright-common@portal:../playwright-common
 ```
 
+## UI Mode and Trace Viewer (Playwright 1.58+)
+
+UI Mode is the recommended way to run tests locally with the Trace Viewer.
+The 1.58 release adds a system theme option, in-editor search, improved network
+panel layout, and formatted JSON responses in the Trace Viewer.
+
+Example commands (in your consuming repo):
+```bash
+# UI Mode (interactive runner + trace viewer)
+yarn playwright test --ui
+
+# Always record full traces from CLI
+yarn playwright test --trace on
+
+# Open a saved trace file
+npx playwright show-trace path/to/trace.zip
+```
+
 ### Mandatory Requirements
 This library is configuration-driven meaning it relies on environment variables or other configuration that must be defined in the consuming test project as this config could be specific to a service or you may be using different environments. You'll need to set up any necessary config such as env vars in your own test project. 
 
@@ -252,7 +270,7 @@ This uses an exponential backoff with jitter. Set attempts to `1` to disable.
 
 ### TableUtils guide
 
-The `TableUtils` class provides robust, production-tested methods to parse various table formats used in HMCTS applications. All methods handle edge cases like hidden rows, sort icons, and whitespace normalization. Empty value cells return empty strings, while rows with empty key/label cells are skipped.
+The `TableUtils` class provides robust, production-tested methods to parse various table formats used in HMCTS applications. All methods handle edge cases like hidden rows (including `aria-hidden`), nested tables, sort icons, and whitespace normalization. Empty value cells return empty strings; visible key/label cells must have content and will throw if missing.
 
 ---
 
@@ -270,6 +288,7 @@ The `TableUtils` class provides robust, production-tested methods to parse vario
 
 All methods:
 - ✅ Filter hidden/invisible rows automatically
+- ✅ Ignore nested tables by scoping rows to the target table element
 - ✅ Remove Unicode sort icons (▼▲↑↓⋀⋁)
 - ✅ Normalize whitespace (trim, collapse multiple spaces)
 - ✅ Execute in browser context (proper DOM access)
@@ -345,18 +364,20 @@ expect(data["Status"]).not.toContain("▲");
 
 ### Edge Cases Handled
 
-**Empty value cells return empty string (keys must have content):**
+**Empty value cells return empty string; empty keys throw:**
 ```ts
 // Table with empty value:
 // | Label        | Value  |
 // | Case Ref     | 12345  |  ← valid (key + value)
 // | Note         |        |  ← valid (key present, empty value returns "")
-// |              | Data   |  ← skipped (empty key)
+// |              | Data   |  ← throws (empty key)
 
 const data = await utils.parseKeyValueTable("#table", page);
 expect(data["Case Ref"]).toBe("12345");
 expect(data["Note"]).toBe(""); // Empty value cells return empty string
-expect(data[""]).toBeUndefined(); // Rows with empty keys are skipped
+
+await expect(utils.parseKeyValueTable("#table-with-empty-key", page))
+  .rejects.toThrow("Failed to extract text from visible key cell");
 ```
 
 **Empty or single-column rows are skipped:**
@@ -466,11 +487,11 @@ expect(firstDoc["Document Name"]).toBe("Application.pdf");
 const pendingDocs = documents.filter(d => d["Status"] === "Pending");
 ```
 
-### Tables Without `<thead>` (First Row as Headers)
+### Tables Without `<thead>` (Header Row Uses `<th>`)
 ```ts
-// When table lacks <thead>, first row becomes headers
+// When table lacks <thead>, a first row with <th> cells becomes headers
 // HTML:
-// <tr><td>Name</td><td>Role</td><td>Email</td></tr>
+// <tr><th>Name</th><th>Role</th><th>Email</th></tr>
 // <tr><td>Alice</td><td>Admin</td><td>alice@hmcts.net</td></tr>
 // <tr><td>Bob</td><td>User</td><td>bob@hmcts.net</td></tr>
 
@@ -481,6 +502,22 @@ expect(users).toEqual([
   { Name: "Alice", Role: "Admin", Email: "alice@hmcts.net" },
   { Name: "Bob", Role: "User", Email: "bob@hmcts.net" }
 ]);
+```
+
+### Headerless Tables (No `<thead>` and No `<th>`)
+```ts
+// When a table has no header row, fallback column_N keys are used
+// HTML:
+// <tr><td>Alice</td><td>Admin</td><td>alice@hmcts.net</td></tr>
+// <tr><td>Bob</td><td>User</td><td>bob@hmcts.net</td></tr>
+
+const data = await utils.parseDataTable("#table", page);
+
+expect(data[0]).toEqual({
+  column_1: "Alice",
+  column_2: "Admin",
+  column_3: "alice@hmcts.net"
+});
 ```
 
 ### Fallback Column Names for Missing Headers
@@ -540,6 +577,11 @@ expect(visible).toHaveLength(3); // Only visible rows
 **Rows with no cells skipped:**
 ```ts
 // Empty <tr></tr> rows are automatically filtered
+```
+
+**Nested tables ignored:**
+```ts
+// Rows from nested tables inside cells are excluded
 ```
 
 ### Practical Examples
