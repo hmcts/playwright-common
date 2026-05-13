@@ -134,7 +134,10 @@ describe("ApiClient", () => {
     await client.get("/health");
 
     expect(storedEntry).toBeDefined();
+    const prevDebug = process.env.PLAYWRIGHT_DEBUG_API;
+    process.env.PLAYWRIGHT_DEBUG_API = "true";
     const attachment = buildApiAttachment(storedEntry!, { includeRaw: true });
+    process.env.PLAYWRIGHT_DEBUG_API = prevDebug;
     expect(attachment.contentType).toBe("application/json");
     const body = JSON.parse(attachment.body);
     expect(body.rawResponse).toBeDefined();

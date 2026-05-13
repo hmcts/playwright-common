@@ -18,7 +18,32 @@ export { SessionUtils } from "./utils/session.utils.js";
 export { TableUtils } from "./utils/table.utils.js";
 export { ValidatorUtils } from "./utils/validator.utils.js";
 export { WaitUtils } from "./utils/wait.utils.js";
+export {
+  buildCoverageRows,
+  formatCoverageText,
+  readCoverageSummary,
+  type CoverageMetric,
+  type CoverageRow,
+  type CoverageSummary,
+  type CoverageTotals,
+} from "./utils/coverage.utils.js";
+export {
+  scanApiEndpoints,
+  type EndpointHit,
+  type EndpointScanOptions,
+  type EndpointScanResult,
+  formatEndpointHitsMarkdown,
+} from "./utils/api-endpoints.utils.js";
 export { ServiceAuthUtils } from "./utils/service-auth.utils.js";
+export {
+  withRetry,
+  isRetryableError,
+  DEFAULT_RETRY_ATTEMPTS,
+  DEFAULT_RETRY_BASE_MS,
+  DEFAULT_RETRY_MAX_MS,
+  DEFAULT_RETRY_MAX_ELAPSED_MS,
+  type RetryCondition,
+} from "./utils/retry.utils.js";
 export {
   createLogger,
   createChildLogger,
@@ -36,3 +61,8 @@ export {
   type ApiRequestOptions,
   type ApiResponsePayload,
 } from "./utils/api-client.js";
+export {
+  CircuitBreaker,
+  type CircuitBreakerOptions,
+  type CircuitBreakerMetrics,
+} from "./utils/circuit-breaker.js";

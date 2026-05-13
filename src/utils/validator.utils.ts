@@ -37,7 +37,11 @@ export class ValidatorUtils {
   public static validateDate(date: string): void {
     const dateRegex = /^\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}$/;
     expect(date).toMatch(dateRegex);
-    const [dayStr, monthStr, yearStr] = date.split(" ");
+    const parts = date.split(" ");
+    if (parts.length < 3) {
+      throw new Error("Invalid date string format");
+    }
+    const [dayStr, monthStr, yearStr] = parts as [string, string, string];
     const day = Number.parseInt(dayStr, 10);
     const monthIndex = MONTH_INDEX[monthStr];
     const year = Number.parseInt(yearStr, 10);

@@ -1,7 +1,6 @@
 import winston, { format as winstonFormat, transports as winstonTransports } from "winston";
 import type { Logger } from "winston";
 import {
-  REDACTED_VALUE,
   SPLAT_SYMBOL,
   buildRedactionState,
   sanitiseValue,
@@ -39,10 +38,13 @@ function resolveRedactionState(options?: LoggerOptions): RedactionState {
     process.env.LOG_REDACTION === undefined
       ? undefined
       : process.env.LOG_REDACTION.toLowerCase() !== "off";
-  return buildRedactionState({
+  const redactionOptions: { enabled?: boolean; patterns?: RedactPattern[] } = {
     enabled: options?.enableRedaction ?? envToggle ?? true,
-    patterns: options?.redactKeys,
-  });
+  };
+  if (options?.redactKeys) {
+    redactionOptions.patterns = options.redactKeys;
+  }
+  return buildRedactionState(redactionOptions);
 }
 
 function applyRedactionFormat(state: RedactionState) {
@@ -70,8 +72,10 @@ function buildFormat(mode: LogFormat, state: RedactionState) {
     applyRedactionFormat(state),
     winstonFormat.timestamp(),
     winstonFormat((info) => {
-      if (!info.service && info.serviceName) {
-        info.service = info.serviceName;
+      const service = info["service"];
+      const serviceName = info["serviceName"];
+      if (!service && serviceName) {
+        info["service"] = serviceName;
       }
       return info;
     })(),
@@ -100,7 +104,9 @@ export function createLogger(options?: LoggerOptions): Logger {
   const redactionState = resolveRedactionState(options);
   const format = buildFormat(resolveLogFormat(options), redactionState);
   const serviceName =
-    options?.serviceName ?? process.env.LOG_SERVICE_NAME ?? "playwright-common";
+    options?.serviceName ??
+    process.env.LOG_SERVICE_NAME ??
+    "playwright-common";
 
   const transports =
     options?.transports && options.transports.length > 0
@@ -135,5 +141,5 @@ export function createChildLogger(
   return logger.child(meta);
 }
 
-export { REDACTED_VALUE };
+export { REDACTED_VALUE } from "./redaction.js";
 export type { RedactPattern, RedactionState } from "./redaction.js";
