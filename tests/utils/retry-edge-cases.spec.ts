@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { withRetry } from "../../src/utils/retry.utils";
 
 describe("withRetry edge cases and validation", () => {
@@ -27,11 +27,12 @@ describe("withRetry edge cases and validation", () => {
   });
 
   it("caps retry-after to maximum of 60 seconds", async () => {
-    let attempt = 0;
-    const startTime = Date.now();
-
+    vi.useFakeTimers();
     try {
-      await withRetry(
+      let attempt = 0;
+      const startTime = Date.now();
+
+      const promise = withRetry(
         () => {
           attempt++;
           const error = new Error("rate limited") as Error & { retryAfterMs?: number };
@@ -42,16 +43,19 @@ describe("withRetry edge cases and validation", () => {
         100,
         2000,
         5000 // maxElapsed = 5 seconds
-      );
-    } catch {
-      // Expected to fail
-    }
+      ).catch(() => undefined);
 
-    const elapsed = Date.now() - startTime;
-    
-    // Should not wait 120 seconds, should cap at 5 seconds (maxElapsed)
-    expect(elapsed).toBeLessThan(6000);
-    expect(attempt).toBe(2); // Should try twice
+      await vi.advanceTimersByTimeAsync(5000);
+      await promise;
+
+      const elapsed = Date.now() - startTime;
+      
+      // Should not wait 120 seconds, should cap at 5 seconds (maxElapsed)
+      expect(elapsed).toBeLessThan(6000);
+      expect(attempt).toBe(2); // Should try twice
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("respects retry-after header when less than backoff", async () => {
@@ -90,10 +94,11 @@ describe("withRetry edge cases and validation", () => {
   });
 
   it("allows maxElapsedMs = 1 as valid (edge case)", async () => {
-    let attempts = 0;
-    
+    vi.useFakeTimers();
     try {
-      await withRetry(
+      let attempts = 0;
+      
+      const promise = withRetry(
         () => {
           attempts++;
           throw new Error("fail");
@@ -102,14 +107,17 @@ describe("withRetry edge cases and validation", () => {
         100,
         1000,
         1 // Extremely short maxElapsedMs - should allow at least first attempt
-      );
-    } catch {
-      // Expected to fail
-    }
+      ).catch(() => undefined);
 
-    // Should at least try once, even with maxElapsedMs=1
-    expect(attempts).toBeGreaterThanOrEqual(1);
-    // But unlikely to get more than 1-2 attempts with 1ms limit
-    expect(attempts).toBeLessThanOrEqual(2);
+      await vi.advanceTimersByTimeAsync(1);
+      await promise;
+
+      // Should at least try once, even with maxElapsedMs=1
+      expect(attempts).toBeGreaterThanOrEqual(1);
+      // But unlikely to get more than 1-2 attempts with 1ms limit
+      expect(attempts).toBeLessThanOrEqual(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
