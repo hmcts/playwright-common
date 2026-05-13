@@ -1,7 +1,6 @@
 import winston, { format as winstonFormat, transports as winstonTransports } from "winston";
 import type { Logger } from "winston";
 import {
-  REDACTED_VALUE,
   SPLAT_SYMBOL,
   buildRedactionState,
   sanitiseValue,
@@ -142,5 +141,5 @@ export function createChildLogger(
   return logger.child(meta);
 }
 
-export { REDACTED_VALUE };
+export { REDACTED_VALUE } from "./redaction.js";
 export type { RedactPattern, RedactionState } from "./redaction.js";

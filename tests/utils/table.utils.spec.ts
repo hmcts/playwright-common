@@ -5,6 +5,7 @@ import { TableUtils } from "../../src/utils/table.utils.js";
 type TableSpec = {
   headers: string[];
   rows: string[][];
+  visibleRows?: boolean[];
 };
 
 describe("TableUtils.mapTable", () => {
@@ -88,6 +89,25 @@ describe("TableUtils.mapTable", () => {
       { "Case reference": "67890", Status: "Closed" },
     ]);
   });
+
+  it("skips hidden rows when mapping legacy tables", async () => {
+    const table = createTableLocator({
+      headers: ["Case reference", "Status"],
+      rows: [
+        ["12345", "Open"],
+        ["67890", "Closed"],
+        ["99999", "Resolved"],
+      ],
+      visibleRows: [true, false, true],
+    });
+
+    const result = await utils.mapCitizenTable(table);
+
+    expect(result).toEqual([
+      { "Case reference": "12345", Status: "Open" },
+      { "Case reference": "99999", Status: "Resolved" },
+    ]);
+  });
 });
 
 function createTableLocator(spec: TableSpec): Locator {
@@ -97,13 +117,16 @@ function createTableLocator(spec: TableSpec): Locator {
 
   const rowsLocator = {
     count: async () => spec.rows.length,
-    nth: (index: number) => createRowLocator(spec.rows[index] ?? []),
+    nth: (index: number) => createRowLocator(
+      spec.rows[index] ?? [],
+      spec.visibleRows?.[index] ?? true
+    ),
   };
 
   return {
     scrollIntoViewIfNeeded: async () => {},
     locator: (selector: string) => {
-      if (selector === "thead tr th") {
+      if (selector === "thead tr th" || selector === "thead tr th, thead tr td") {
         return headerLocator;
       }
       if (selector === "tbody tr") {
@@ -114,8 +137,9 @@ function createTableLocator(spec: TableSpec): Locator {
   } as unknown as Locator;
 }
 
-function createRowLocator(values: string[]) {
+function createRowLocator(values: string[], visible: boolean) {
   return {
+    isVisible: async () => visible,
     locator: (selector: string) => {
       if (selector !== "th, td") {
         throw new Error(`Unsupported selector for row: ${selector}`);
