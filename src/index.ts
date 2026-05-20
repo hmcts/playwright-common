@@ -35,6 +35,7 @@ export {
   formatEndpointHitsMarkdown,
 } from "./utils/api-endpoints.utils.js";
 export { ServiceAuthUtils } from "./utils/service-auth.utils.js";
+
 export {
   withRetry,
   isRetryableError,
@@ -66,3 +67,6 @@ export {
   type CircuitBreakerOptions,
   type CircuitBreakerMetrics,
 } from "./utils/circuit-breaker.js";
+export { CcdApiClient, type CcdApiClientOptions } from './utils/ccd-api-client.js';
+export { CcdPageClient, type CcdPageClientOptions } from './utils/ccd-page-client.js';
+export * from "./utils/build-manage-case-cookie-auth.js";

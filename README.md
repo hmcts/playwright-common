@@ -120,6 +120,91 @@ const attachment = buildApiAttachment(entry, { includeRaw: true }); // raw only 
 
 Default timeout: 30s per request (override via `timeoutMs` per call).
 
+## CCD Clients
+
+This library provides two clients for interacting with the CCD API.
+
+### CcdPageClient
+
+The `CcdPageClient` is a utility for interacting with the HMCTS CCD (Core Case Data) API through the **browser session**. It simplifies the process of creating and updating cases by handling the two-step event submission process (start event and submit event) using the page's existing cookie-based authentication. This is the recommended client for most UI test scenarios.
+
+#### Example Usage
+
+Here's an example of how to use the `CcdPageClient` to create a `hearingUrgency` event:
+
+```ts
+import { CcdPageClient } from "@hmcts/playwright-common";
+
+// Assumes 'page' is a Playwright Page object that is already authenticated.
+const ccdPageClient = new CcdPageClient();
+
+const caseId = '1234567890123456';
+const eventId = 'hearingUrgency';
+
+const eventData = {
+  isCaseUrgent: "No",
+  doYouNeedAWithoutNoticeHearing: "No",
+  doYouRequireAHearingWithReducedNotice: "No",
+  areRespondentsAwareOfProceedings: "No",
+};
+
+await ccdPageClient.createEvent(page, caseId, eventId, eventData);
+```
+
+### CcdApiClient
+
+The `CcdApiClient` is a low-level utility for interacting with the HMCTS CCD (Core Case Data) API directly via HTTP requests. It is suitable for server-to-server interactions or scenarios where you need to manage authentication tokens manually.
+
+#### Authentication
+
+The `CcdApiClient` requires an `authToken` (IDAM token) and a `serviceToken` (S2S token) for authentication. These can be provided in the constructor or on a per-call basis.
+
+#### Example Usage
+
+Here's an example of how to use the `CcdApiClient` to submit an event:
+
+```ts
+import { CcdApiClient } from "@hmcts/playwright-common";
+
+const ccdApiClient = new CcdApiClient({
+  baseUrl: process.env.CCD_BASE_URL,
+  authToken: process.env.IDAM_ACCESS_TOKEN,
+  serviceToken: process.env.S2S_TOKEN,
+});
+
+const userId = 'USER_ID';
+const jurisdiction = 'JURISDICTION';
+const caseType = 'CASE_TYPE';
+const caseId = '1234567890123456';
+const eventId = 'hearingUrgency';
+
+// 1. Start the event to get an event token
+const eventToken = await ccdApiClient.getStartEventToken(
+  `/caseworkers/${userId}/jurisdictions/${jurisdiction}/case-types/${caseType}/cases/${caseId}/event-triggers/${eventId}/token`
+);
+
+// 2. Submit the event with the event token and payload
+const eventData = {
+  data: {
+    isCaseUrgent: "No",
+    doYouNeedAWithoutNoticeHearing: "No",
+    doYouRequireAHearingWithReducedNotice: "No",
+    areRespondentsAwareOfProceedings: "No",
+  },
+  event: {
+    id: eventId,
+    summary: "Updating hearing urgency",
+    description: "Updating hearing urgency for the case",
+  },
+  event_token: eventToken,
+};
+
+await ccdApiClient.submitEvent(
+  `/caseworkers/${userId}/jurisdictions/${jurisdiction}/case-types/${caseType}/cases/${caseId}/events`,
+  eventData
+);
+```
+
 ## Security Best Practices
 
 ⚠️ **CRITICAL: Never enable `PLAYWRIGHT_DEBUG_API=true` in CI/production environments**
