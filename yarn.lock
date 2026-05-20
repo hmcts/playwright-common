@@ -2,7 +2,7 @@
 # Manual changes might be lost - proceed with caution!
 
 __metadata:
-  version: 9
+  version: 10
   cacheKey: 10c0
 
 "@axe-core/playwright@npm:^4.11.0":
@@ -1141,11 +1141,11 @@ __metadata:
   linkType: hard
 
 "@types/node@npm:*, @types/node@npm:^25.2.0":
-  version: 25.9.0
-  resolution: "@types/node@npm:25.9.0"
+  version: 25.9.1
+  resolution: "@types/node@npm:25.9.1"
   dependencies:
     undici-types: "npm:>=7.24.0 <7.24.7"
-  checksum: 10c0/1845f0ce5471213a4f0c887845c50993968ea863c03bb355282b59bdcc877d009a2785f0f506cfc40b8ce7548a21e33ac826e998be62d42b000bfd9ccdc6c910
+  checksum: 10c0/9a04682842bebbcf21a1779dfeab9aa733d7bd7bbc0a0edb641ab3a9a3d43eac543225acf669c334f458f1956443ebc072bc3c72840c543b8b356cab5c82d456
   languageName: node
   linkType: hard
 
@@ -2148,13 +2148,13 @@ __metadata:
   linkType: hard
 
 "eslint-plugin-playwright@npm:^2.5.1":
-  version: 2.10.3
-  resolution: "eslint-plugin-playwright@npm:2.10.3"
+  version: 2.10.4
+  resolution: "eslint-plugin-playwright@npm:2.10.4"
   dependencies:
     globals: "npm:^17.3.0"
   peerDependencies:
     eslint: ">=8.40.0"
-  checksum: 10c0/15892bfd4352e72ce832a3953b4f45877c6f3275c43682d863619329994980060d8358b1e3478a922f67f28e68dbb36b860341e4c24998314789fc9bc946faba
+  checksum: 10c0/515aac2a870b217f23637bfdab26b9125e47cff91625dbafe20617b3522430fdee8961780f6b7dc9fcfcdbec8235ccd30eafd0ac871088cf3af4d70b8f9b7e29
   languageName: node
   linkType: hard
 
