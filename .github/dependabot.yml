@@ -1,0 +1,14 @@
+# This file disables Dependabot version updates to avoid conflicts with Renovate.
+# Renovate is the primary tool used for dependency management in this repository.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 0
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 0
