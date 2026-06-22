@@ -25,7 +25,7 @@
   "dependencies": {
     "@axe-core/playwright": "^4.11.0",
     "@eslint/js": "^9.11.1",
-    "@typescript-eslint/eslint-plugin": "8.60.1",
+    "@typescript-eslint/eslint-plugin": "8.61.1",
     "axe-core": "^4.11.1",
     "axe-html-reporter": "^2.2.11",
     "eslint": "^9.11.1",
@@ -47,8 +47,8 @@
     "@playwright/test": "^1.58.0",
     "@types/node": "^25.2.0",
     "@types/winston": "^2.4.4",
-    "@typescript-eslint/parser": "8.60.1",
-    "@vitest/coverage-v8": "4.1.8",
+    "@typescript-eslint/parser": "8.61.1",
+    "@vitest/coverage-v8": "4.1.9",
     "playwright-core": "^1.58.1",
     "vitest": "^4.0.8"
   },
@@ -69,5 +69,5 @@
     "glob": "^11.0.0",
     "esbuild": "^0.28.0"
   },
-  "packageManager": "yarn@4.16.0"
+  "packageManager": "yarn@4.17.0"
 }
