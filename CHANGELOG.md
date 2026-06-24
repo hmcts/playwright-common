@@ -3,6 +3,10 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3]
+### Update
+- update playwright version to 1.61.0 (to resolve issues with bug with installing browsers)
+
 ## [1.1.2]
 ### Added
 - `table.utils.helpers.ts` - New module containing reusable table parsing logic with comprehensive TypeScript types
@@ -215,7 +219,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added table & wait utilities
 
-[1.1.1]: https://github.com/hmcts/playwright-common/compare/v1.1.1...HEAD
+[1.1.3]: https://github.com/hmcts/playwright-common/compare/v1.1.2...HEAD
+[1.1.1]: https://github.com/hmcts/playwright-common/compare/v1.1.1...v1.1.2
 [1.1.0]: https://github.com/hmcts/playwright-common/compare/v1.1.0...v1.1.1
 [1.0.39]: https://github.com/hmcts/playwright-common/compare/v1.0.39...v1.1.0
 [1.0.38]: https://github.com/hmcts/playwright-common/compare/v1.0.38...v1.0.39
