@@ -253,7 +253,7 @@ __metadata:
     "@types/node": "npm:^25.2.0"
     "@types/winston": "npm:^2.4.4"
     "@typescript-eslint/eslint-plugin": "npm:8.62.0"
-    "@typescript-eslint/parser": "npm:8.62.0"
+    "@typescript-eslint/parser": "npm:^8.62.0"
     "@vitest/coverage-v8": "npm:4.1.9"
     axe-core: "npm:^4.11.1"
     axe-html-reporter: "npm:^2.2.11"
@@ -267,7 +267,7 @@ __metadata:
     ts-morph: "npm:27"
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.54.0"
-    vitest: "npm:^4.0.8"
+    vitest: "npm:4.1.9"
     winston: "npm:^3.19.0"
   peerDependencies:
     "@playwright/test": ^1.61.0
@@ -1234,7 +1234,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/parser@npm:8.62.0":
+"@typescript-eslint/parser@npm:8.62.0, @typescript-eslint/parser@npm:^8.62.0":
   version: 8.62.0
   resolution: "@typescript-eslint/parser@npm:8.62.0"
   dependencies:
@@ -4131,7 +4131,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vitest@npm:^4.0.8":
+"vitest@npm:4.1.9":
   version: 4.1.9
   resolution: "vitest@npm:4.1.9"
   dependencies:
