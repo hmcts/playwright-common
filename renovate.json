@@ -17,13 +17,15 @@
       "groupSlug": "All-minor-patch",
       "addLabels": [
         "Renovate All-minor-patch"
-      ]
+      ],
+      "automerge": true
     },
     {
       "matchFileNames": [
         ".nvmrc"
       ],
-      "enabled": true
+      "enabled": true,
+      "automerge": true
     }
   ]
 }
