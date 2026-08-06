@@ -55,7 +55,7 @@ describe("redaction utilities", () => {
     const result = sanitiseValue(payload, state);
 
     expect(result.password).toBe(REDACTED_VALUE);
-    expect(result.nested).toEqual({token: REDACTED_VALUE});
+    expect(result.nested).toEqual({ token: REDACTED_VALUE });
     expect(result.self).toBe("[Circular]");
   });
 

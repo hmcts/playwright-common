@@ -1,4 +1,4 @@
-import {URL} from "node:url";
+import { URL } from "node:url";
 
 export const REDACTED_VALUE = "[REDACTED]";
 const CIRCULAR_PLACEHOLDER = "[Circular]";
@@ -48,7 +48,7 @@ export function buildRedactionState(
       typeof pattern === "string" ? new RegExp(pattern, "i") : pattern
     )
     : DEFAULT_PATTERNS;
-  return {enabled, patterns};
+  return { enabled, patterns };
 }
 
 export function shouldRedactKey(
