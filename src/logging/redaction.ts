@@ -8,7 +8,7 @@ export type RedactPattern = string | RegExp;
 
 const TOKEN_TEXT_REGEX = /(Bearer\s+)([A-Z0-9.-]+)/gi;
 const KEY_VALUE_SECRET_REGEX =
-  /((?:token|secret|password|api[_-]?key)[^:=]*)([:=]\s*)(["']?)([^"'\s]+)/gi;
+  /((?:token|secret|password|session|api[_-]?key)[^:=]*)([:=]\s*)(["']?)([^"'\s]+)/gi;
 
 const DEFAULT_PATTERNS: RegExp[] = [
   /token/i,
@@ -45,8 +45,8 @@ export function buildRedactionState(
   const enabled = options?.enabled ?? true;
   const patterns = options?.patterns?.length
     ? options.patterns.map((pattern) =>
-        typeof pattern === "string" ? new RegExp(pattern, "i") : pattern
-      )
+      typeof pattern === "string" ? new RegExp(pattern, "i") : pattern
+    )
     : DEFAULT_PATTERNS;
   return { enabled, patterns };
 }
@@ -61,11 +61,11 @@ export function shouldRedactKey(
 
 /**
  * Recursively sanitize a value by redacting sensitive fields and string patterns.
- * 
+ *
  * Note: The returned value maintains the same structure as the input, but with
  * sensitive data replaced with [REDACTED]. The type cast to T is safe because
  * the structure is preserved, only values are changed.
- * 
+ *
  * @param value - Value to sanitize
  * @param state - Redaction state with enabled flag and patterns
  * @param key - Optional key name for determining if the value itself should be redacted

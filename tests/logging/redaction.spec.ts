@@ -85,4 +85,14 @@ describe("redaction utilities", () => {
     expect(result[1]).toEqual({ nested: [{ password: REDACTED_VALUE }] });
     expect(result[2]).toContain(REDACTED_VALUE);
   });
+
+  it("redacts sensitive values within strings", () => {
+    const payload = {
+      error: "cookie: secret=abc XSRF-TOKEN=123 session=abc123 harmless=value",
+    };
+
+    const result = sanitiseValue(payload, state);
+
+    expect(result.error).toBe("cookie: secret=[REDACTED] XSRF-TOKEN=[REDACTED] session=[REDACTED] harmless=value");
+  })
 });
