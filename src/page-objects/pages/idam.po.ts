@@ -12,7 +12,7 @@ export class IdamPage {
   readonly heading = this.page.getByRole("heading", {
     name: "Sign in or create an account",
   });
-  
+
   readonly usernameInput = this.page.locator(
     '[data-testid="idam-username-input"], #username, input[name="username"], input[type="email"]'
   );
@@ -25,10 +25,17 @@ export class IdamPage {
     '[data-testid="idam-submit-button"], [name="save"], button[type="submit"], input[type="submit"]'
   );
 
+  readonly continueBtn = this.page.getByRole("button", {
+    name: "Continue",
+    exact: true,
+  });
+
   public async login(user: UserCredentials): Promise<void> {
     await this.usernameInput.fill(user.username);
+    await this.continueBtn.click();
+    await this.passwordInput.waitFor({ state: "visible" });
     await this.passwordInput.fill(user.password);
-    await this.submitBtn.click();
+    await this.continueBtn.click();
     if (user.sessionFile) {
       await this.saveSession(user.sessionFile);
     }
