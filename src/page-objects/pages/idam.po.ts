@@ -25,17 +25,19 @@ export class IdamPage {
     '[data-testid="idam-submit-button"], [name="save"], button[type="submit"], input[type="submit"]'
   );
 
-  readonly continueBtn = this.page.getByRole("button", {
-    name: "Continue",
-    exact: true,
-  });
+  readonly visibleSubmitBtn = this.submitBtn.filter({ visible: true });
 
   public async login(user: UserCredentials): Promise<void> {
     await this.usernameInput.fill(user.username);
-    await this.continueBtn.click();
-    await this.passwordInput.waitFor({ state: "visible" });
+
+    if (!(await this.passwordInput.isVisible())) {
+      await this.visibleSubmitBtn.click();
+      await this.passwordInput.waitFor({ state: "visible" });
+    }
+
     await this.passwordInput.fill(user.password);
-    await this.continueBtn.click();
+    await this.visibleSubmitBtn.click();
+
     if (user.sessionFile) {
       await this.saveSession(user.sessionFile);
     }
