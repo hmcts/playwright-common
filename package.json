@@ -1,7 +1,7 @@
 {
   "name": "@hmcts/playwright-common",
   "description": "Common library for Playwright tests",
-  "version": "1.1.2",
+  "version": "1.1.6",
   "author": "HMCTS",
   "license": "MIT",
   "repository": {
@@ -25,7 +25,7 @@
   "dependencies": {
     "@axe-core/playwright": "^4.11.0",
     "@eslint/js": "^9.11.1",
-    "@typescript-eslint/eslint-plugin": "8.59.3",
+    "@typescript-eslint/eslint-plugin": "8.71.2",
     "axe-core": "^4.11.1",
     "axe-html-reporter": "^2.2.11",
     "eslint": "^9.11.1",
@@ -40,17 +40,17 @@
     "winston": "^3.19.0"
   },
   "peerDependencies": {
-    "@playwright/test": "^1.58.0",
-    "playwright-core": "^1.58.0"
+    "@playwright/test": "^1.61.0",
+    "playwright-core": "^1.61.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.0",
+    "@playwright/test": "^1.61.0",
     "@types/node": "^25.2.0",
     "@types/winston": "^2.4.4",
-    "@typescript-eslint/parser": "8.59.3",
-    "@vitest/coverage-v8": "4.1.6",
-    "playwright-core": "^1.58.1",
-    "vitest": "^4.0.8"
+    "@typescript-eslint/parser": "^8.62.0",
+    "@vitest/coverage-v8": "4.1.12",
+    "playwright-core": "^1.61.0",
+    "vitest": "4.1.12"
   },
   "scripts": {
     "build": "rm -rf dist && yarn tsc -p tsconfig.json",
@@ -69,5 +69,5 @@
     "glob": "^11.0.0",
     "esbuild": "^0.28.0"
   },
-  "packageManager": "yarn@4.14.1"
+  "packageManager": "yarn@4.18.1"
 }
