@@ -288,7 +288,7 @@ __metadata:
   dependencies:
     "@axe-core/playwright": "npm:^4.11.0"
     "@eslint/js": "npm:^9.11.1"
-    "@playwright/test": "npm:^1.61.0"
+    "@playwright/test": "npm:^1.64.0"
     "@types/node": "npm:^25.2.0"
     "@types/winston": "npm:^2.4.4"
     "@typescript-eslint/eslint-plugin": "npm:8.71.2"
@@ -301,7 +301,7 @@ __metadata:
     get-port: "npm:^7.1.0"
     globals: "npm:^17.3.0"
     lighthouse: "npm:13"
-    playwright-core: "npm:^1.61.0"
+    playwright-core: "npm:^1.64.0"
     playwright-lighthouse: "npm:^4.0.0"
     ts-morph: "npm:27"
     typescript: "npm:^5.9.3"
@@ -309,8 +309,8 @@ __metadata:
     vitest: "npm:4.1.12"
     winston: "npm:^3.19.0"
   peerDependencies:
-    "@playwright/test": ^1.61.0
-    playwright-core: ^1.61.0
+    "@playwright/test": ^1.64.0
+    playwright-core: ^1.64.0
   bin:
     delete-nightly-dev-branch: dist/scripts/delete-nightly-dev-branch.js
     get-secrets: dist/scripts/get-secrets.js
@@ -564,7 +564,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@playwright/test@npm:^1.61.0":
+"@playwright/test@npm:^1.64.0":
   version: 1.64.1
   resolution: "@playwright/test@npm:1.64.1"
   dependencies:
@@ -3009,7 +3009,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"playwright-core@npm:1.64.1, playwright-core@npm:^1.61.0":
+"playwright-core@npm:1.64.1, playwright-core@npm:^1.64.0":
   version: 1.64.1
   resolution: "playwright-core@npm:1.64.1"
   bin:
