@@ -1686,13 +1686,13 @@ __metadata:
   linkType: hard
 
 "eslint-plugin-playwright@npm:^2.5.1":
-  version: 2.12.1
-  resolution: "eslint-plugin-playwright@npm:2.12.1"
+  version: 2.12.2
+  resolution: "eslint-plugin-playwright@npm:2.12.2"
   dependencies:
     globals: "npm:^17.3.0"
   peerDependencies:
     eslint: ">=8.40.0"
-  checksum: 10c0/498699568260e14b7c5258e714c75504d9abf5e6d36d32500e78dea33c5a072fa643ef826dc528248fd50d1936b12c4f47df8d18ad93d0c6b27c3bf1825e0e83
+  checksum: 10c0/a755ee10fd7733642969b853f980c8445ade3de46570f56f9f02d2c7c91d6f2b25fa79b83ee191e36471cba4691cf48962e68f3f079f1148d2b2af09e47edcfe
   languageName: node
   linkType: hard
 
@@ -2031,9 +2031,9 @@ __metadata:
   linkType: hard
 
 "globals@npm:^17.3.0":
-  version: 17.13.0
-  resolution: "globals@npm:17.13.0"
-  checksum: 10c0/8371d9e4e5581640141b5cce70a098edd765d2e3ab063b14998e590698071e0afb4a4a6739ccfbdcbdeb2565c5553697ba07d95703c51039912cf341a7dba7a7
+  version: 17.14.0
+  resolution: "globals@npm:17.14.0"
+  checksum: 10c0/422d17c24e87170d4aa566b97a53339ae451c2f4d78512594a7ca951cdb939bc4a85c10071e6dcf77ca63de48713a77f2e71eb9214e44880233dff2090e92731
   languageName: node
   linkType: hard
 
