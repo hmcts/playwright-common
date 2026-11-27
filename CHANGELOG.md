@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.8]
 ### Fixed
 - Removed the exact `@typescript-eslint/eslint-plugin` pin (it is already provided by `typescript-eslint`)
-- Bumped `ts-morph` from 27 to 28 and `typescript-eslint` to `^8.73.0` so `minimatch` resolves to 11.x (GHSA-g3hv-75wg-m249), allowing consumers to take security updates without `resolutions` overrides
+- Bumped `ts-morph` from 27 to 28 and `typescript-eslint` to `^8.74.0` so `minimatch` resolves to 11.x (GHSA-g3hv-75wg-m249), allowing consumers to take security updates without `resolutions` overrides
 
 ## [1.1.7]
 ### Update
