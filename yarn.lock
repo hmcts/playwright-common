@@ -6,13 +6,13 @@ __metadata:
   cacheKey: 10c0
 
 "@axe-core/playwright@npm:^4.11.0":
-  version: 4.14.1
-  resolution: "@axe-core/playwright@npm:4.14.1"
+  version: 4.14.0
+  resolution: "@axe-core/playwright@npm:4.14.0"
   dependencies:
-    axe-core: "npm:~4.14.1"
+    axe-core: "npm:~4.14.0"
   peerDependencies:
     playwright-core: ">= 1.0.0"
-  checksum: 10c0/9a9b8ed241f9e96bb5b3bef6d2946b77feb8e7b2efb2ec9cf91ae76e27bae4184de15c7771ee3e86baa1ae9a8789c27d16e6b736b1429083fb662e749cabaf3c
+  checksum: 10c0/a42bca2305bbb80a374be9ff6642cac7b45f5f0aef1be9170ae42617c3423501ab1a33c8581641a71554a0c6a69f6ca512a5cc6e320ed197339a9ac4edfa713c
   languageName: node
   linkType: hard
 
@@ -224,8 +224,7 @@ __metadata:
     "@playwright/test": "npm:^1.64.0"
     "@types/node": "npm:^25.2.0"
     "@types/winston": "npm:^2.4.4"
-    "@typescript-eslint/eslint-plugin": "npm:8.74.0"
-    "@typescript-eslint/parser": "npm:^8.62.0"
+    "@typescript-eslint/parser": "npm:^8.74.0"
     "@vitest/coverage-v8": "npm:4.1.12"
     axe-core: "npm:^4.11.1"
     axe-html-reporter: "npm:^2.2.11"
@@ -236,9 +235,9 @@ __metadata:
     lighthouse: "npm:13"
     playwright-core: "npm:^1.64.0"
     playwright-lighthouse: "npm:^4.0.0"
-    ts-morph: "npm:27"
+    ts-morph: "npm:28"
     typescript: "npm:^5.9.3"
-    typescript-eslint: "npm:^8.54.0"
+    typescript-eslint: "npm:^8.74.0"
     vitest: "npm:4.1.12"
     winston: "npm:^3.19.0"
   peerDependencies:
@@ -288,22 +287,6 @@ __metadata:
   version: 0.4.3
   resolution: "@humanwhocodes/retry@npm:0.4.3"
   checksum: 10c0/3775bb30087d4440b3f7406d5a057777d90e4b9f435af488a4923ef249e93615fb78565a85f173a186a076c7706a81d0d57d563a2624e4de2c5c9c66c486ce42
-  languageName: node
-  linkType: hard
-
-"@isaacs/balanced-match@npm:^4.0.1":
-  version: 4.0.1
-  resolution: "@isaacs/balanced-match@npm:4.0.1"
-  checksum: 10c0/7da011805b259ec5c955f01cee903da72ad97c5e6f01ca96197267d3f33103d5b2f8a1af192140f3aa64526c593c8d098ae366c2b11f7f17645d12387c2fd420
-  languageName: node
-  linkType: hard
-
-"@isaacs/brace-expansion@npm:^5.0.0":
-  version: 5.0.1
-  resolution: "@isaacs/brace-expansion@npm:5.0.1"
-  dependencies:
-    "@isaacs/balanced-match": "npm:^4.0.1"
-  checksum: 10c0/e5d67c7bbf1f17b88132a35bc638af306d48acbb72810d48fa6e6edd8ab375854773108e8bf70f021f7ef6a8273455a6d1f0c3b5aa2aff06ce7894049ab77fb8
   languageName: node
   linkType: hard
 
@@ -786,14 +769,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ts-morph/common@npm:~0.28.1":
-  version: 0.28.1
-  resolution: "@ts-morph/common@npm:0.28.1"
+"@ts-morph/common@npm:~0.29.0":
+  version: 0.29.1
+  resolution: "@ts-morph/common@npm:0.29.1"
   dependencies:
-    minimatch: "npm:^10.0.1"
+    minimatch: "npm:^11.0.1"
     path-browserify: "npm:^1.0.1"
     tinyglobby: "npm:^0.2.14"
-  checksum: 10c0/d51276d840997e0f8f83e04f8b1689135bb12588a7ddbed575f87848d5737eeae31e242685d6449de27573e8ed30892157fea643393cb875e175f2711200bc50
+  checksum: 10c0/410326753d1caa71a0fe7bf65ba31b995436d87648297a924a13ba078ebd155722e3d04fc249e2c84af9e6e85c9e5f00a1595534a175cd089ecaadadb0bc5214
   languageName: node
   linkType: hard
 
@@ -829,20 +812,20 @@ __metadata:
   linkType: hard
 
 "@types/node@npm:*":
-  version: 26.6.11
-  resolution: "@types/node@npm:26.6.11"
+  version: 26.6.4
+  resolution: "@types/node@npm:26.6.4"
   dependencies:
     undici-types: "npm:~8.9.0"
-  checksum: 10c0/9771f1140557ee98f65de05fdc50a4da8d0e602bbbedf206b41f679f95fb52c9a39d854ad813dc3e4f1fb9a4c22f1b4d324607eb299670c515d3ab093701e815
+  checksum: 10c0/094e7362df9200ba4c2da09131ca3b5d1aa51535a268a24e4ee2546d9c5a323d1d30cbdaaaa3db7ef8b2387572d1f9edabb11538ab7a09d3bca33ae5cddc2b1b
   languageName: node
   linkType: hard
 
 "@types/node@npm:^25.2.0":
-  version: 25.9.12
-  resolution: "@types/node@npm:25.9.12"
+  version: 25.9.9
+  resolution: "@types/node@npm:25.9.9"
   dependencies:
     undici-types: "npm:>=7.24.0 <7.24.7"
-  checksum: 10c0/ee2c1c00f70254af5a0e2d5dbf7f4a90b28fe21ee7c7b00d4d3f9c3d1634e41bcd4fd1b7819acf75ee3dbc9c5ca5c5d6784cd9dda8d992fc34f2a9d6a2cec71b
+  checksum: 10c0/2ba08caa7118af2f2761f2f5db9b6304faf5bd027a2dcb72bf6fcae3dd9e470d17045fec27f89023c02e7d4e0661c6e5877174bd39794bef080db8b35ad4a1ea
   languageName: node
   linkType: hard
 
@@ -882,7 +865,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/parser@npm:8.74.0, @typescript-eslint/parser@npm:^8.62.0":
+"@typescript-eslint/parser@npm:8.74.0, @typescript-eslint/parser@npm:^8.74.0":
   version: 8.74.0
   resolution: "@typescript-eslint/parser@npm:8.74.0"
   dependencies:
@@ -1263,7 +1246,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"axe-core@npm:^4.11.1, axe-core@npm:~4.14.1":
+"axe-core@npm:^4.11.1, axe-core@npm:~4.14.0":
   version: 4.14.1
   resolution: "axe-core@npm:4.14.1"
   checksum: 10c0/6b36ab43136ee603ff56f2f3d8a983b67a6d1e973d59ff61c62be4a3d855641f918595ce8b6d2a52c97dee9a80a3925a35d7a812f3ab3bd48d474fb6ad9080ca
@@ -2617,32 +2600,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimatch@npm:^10.0.1":
-  version: 10.1.1
-  resolution: "minimatch@npm:10.1.1"
-  dependencies:
-    "@isaacs/brace-expansion": "npm:^5.0.0"
-  checksum: 10c0/c85d44821c71973d636091fddbfbffe62370f5ee3caf0241c5b60c18cd289e916200acb2361b7e987558cd06896d153e25d505db9fc1e43e6b4b6752e2702902
-  languageName: node
-  linkType: hard
-
-"minimatch@npm:^11.0.1":
+"minimatch@npm:^11.0.1, minimatch@npm:^11.0.5":
   version: 11.0.9
   resolution: "minimatch@npm:11.0.9"
   dependencies:
     "@isaacs/nonrecursive-glob-match": "npm:^1.1.0"
     brace-expansion: "npm:^5.0.12"
   checksum: 10c0/17c8b5caebaa8c1ecc1c6d58028d192f0e94ebe03976bb9f348920c107cde3185614f74543fe40dfc79ecf0bd74158b816633fc9a8f66da32c0d5327ecbb91e9
-  languageName: node
-  linkType: hard
-
-"minimatch@npm:^11.0.5":
-  version: 11.0.5
-  resolution: "minimatch@npm:11.0.5"
-  dependencies:
-    "@isaacs/nonrecursive-glob-match": "npm:^1.1.0"
-    brace-expansion: "npm:^5.0.12"
-  checksum: 10c0/398cbb80d0faf4d9714d62b9d8a55af4df27d885144317416a6efc1c673705210cbc9b17d263b368b19a91749df9b4769a18fafd5e88eb43326f502267145fc0
   languageName: node
   linkType: hard
 
@@ -3563,13 +3527,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-morph@npm:27":
-  version: 27.0.2
-  resolution: "ts-morph@npm:27.0.2"
+"ts-morph@npm:28":
+  version: 28.0.0
+  resolution: "ts-morph@npm:28.0.0"
   dependencies:
-    "@ts-morph/common": "npm:~0.28.1"
+    "@ts-morph/common": "npm:~0.29.0"
     code-block-writer: "npm:^13.0.3"
-  checksum: 10c0/224715cc6d97b8ff5afd3986f9629f912a0ebd83eaecbdca91c35cf10a98f607c663f666e7ea5e6afab00563d00dc80fa7a13552cc7f1cef735261c3217d0863
+  checksum: 10c0/969570a5e983b4193735fff43878ce7b78787b4860bf3d23f330c86d7de707286969e5a82d486dce333eea27bf9d373a46f9de58a80c0bf86d2a462620563a55
   languageName: node
   linkType: hard
 
@@ -3605,7 +3569,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript-eslint@npm:^8.54.0":
+"typescript-eslint@npm:^8.74.0":
   version: 8.74.0
   resolution: "typescript-eslint@npm:8.74.0"
   dependencies:
